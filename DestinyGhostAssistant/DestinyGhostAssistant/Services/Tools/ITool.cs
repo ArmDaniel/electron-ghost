@@ -33,7 +33,7 @@ namespace DestinyGhostAssistant.Services.Tools
         /// <returns>
         /// A task that represents the asynchronous operation.
         /// The result of the task is a string message indicating the outcome
-        _        /// of the tool's execution (e.g., success message, data, or error details).
+        /// of the tool's execution (e.g., success message, data, or error details).
         /// </returns>
         Task<string> ExecuteAsync(Dictionary<string, object> parameters);
     }

@@ -18,6 +18,7 @@ namespace DestinyGhostAssistant.ViewModels
         public ObservableCollection<ChatMessage> Messages { get; }
 
         private string _currentMessage = string.Empty;
+
         public string CurrentMessage { get => _currentMessage; set => SetProperty(ref _currentMessage, value); } // Simplified setter
 
         public ICommand SendMessageCommand { get; }
@@ -32,15 +33,11 @@ namespace DestinyGhostAssistant.ViewModels
             get => _isSendingMessage;
             private set
             {
-                if (SetProperty(ref _isSendingMessage, value))
-                {
-                    // Update CanExecute for all relevant commands
-                    if (SendMessageCommand is RelayCommand sendCmd) sendCmd.RaiseCanExecuteChanged();
-                    if (SaveChatCommand is RelayCommand saveCmd) saveCmd.RaiseCanExecuteChanged();
-                    if (LoadChatCommand is RelayCommand loadCmd) loadCmd.RaiseCanExecuteChanged();
-                    if (NewChatCommand is RelayCommand newCmd) newCmd.RaiseCanExecuteChanged(); // NewChat might also depend on !IsSendingMessage
-                    if (OpenSettingsCommand is RelayCommand openSetCmd) openSetCmd.RaiseCanExecuteChanged(); // Settings might also depend on !IsSendingMessage
-                }
+
+                SetProperty(ref _isSendingMessage, value);
+                // CommandManager.RequerySuggested will handle updating the CanExecute state
+                // for RelayCommand, so manual RaiseCanExecuteChanged is not needed here.
+
             }
         }
 

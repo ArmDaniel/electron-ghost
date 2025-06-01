@@ -40,7 +40,7 @@ namespace DestinyGhostAssistant.Services
             _httpClient.DefaultRequestHeaders.UserAgent.Add(AppUserAgent);
         }
 
-        public async Task<string> GetChatCompletionAsync(List<OpenRouterMessage> messages, string modelName = "gryphe/mythomax-l2-13b")
+        public async Task<string> GetChatCompletionAsync(List<OpenRouterMessage> messages, string modelName = "nousresearch/deephermes-3-mistral-24b-preview:free")
         {
             if (string.IsNullOrEmpty(_apiKey) || _apiKey == "YOUR_API_KEY_PLACEHOLDER") // Defensive check
             {
