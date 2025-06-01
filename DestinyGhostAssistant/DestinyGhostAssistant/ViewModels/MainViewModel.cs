@@ -22,13 +22,9 @@ namespace DestinyGhostAssistant.ViewModels
             get => _currentMessage;
             set
             {
-                if (SetProperty(ref _currentMessage, value))
-                {
-                    if (SendMessageCommand is RelayCommand command)
-                    {
-                        command.RaiseCanExecuteChanged();
-                    }
-                }
+                SetProperty(ref _currentMessage, value);
+                // CommandManager.RequerySuggested will handle updating the CanExecute state
+                // for RelayCommand, so manual RaiseCanExecuteChanged is not needed here.
             }
         }
 
@@ -40,13 +36,9 @@ namespace DestinyGhostAssistant.ViewModels
             get => _isSendingMessage;
             private set
             {
-                if (SetProperty(ref _isSendingMessage, value))
-                {
-                    if (SendMessageCommand is RelayCommand command)
-                    {
-                        command.RaiseCanExecuteChanged();
-                    }
-                }
+                SetProperty(ref _isSendingMessage, value);
+                // CommandManager.RequerySuggested will handle updating the CanExecute state
+                // for RelayCommand, so manual RaiseCanExecuteChanged is not needed here.
             }
         }
 
