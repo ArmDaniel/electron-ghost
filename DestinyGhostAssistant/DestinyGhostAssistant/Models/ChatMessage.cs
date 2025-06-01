@@ -16,11 +16,11 @@ namespace DestinyGhostAssistant.Models
         public DateTime Timestamp { get; set; }
         public string SenderDisplay => Sender.ToString();
 
-        public ChatMessage(string text, MessageSender sender)
+        public ChatMessage(string text, MessageSender sender, DateTime? timestamp = null)
         {
             Text = text;
             Sender = sender;
-            Timestamp = DateTime.Now;
+            Timestamp = timestamp ?? DateTime.Now;
         }
     }
 }

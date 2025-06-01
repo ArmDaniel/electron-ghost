@@ -92,5 +92,11 @@ namespace DestinyGhostAssistant
             }
             Loaded -= MainWindow_Loaded;
         }
+
+        // Click handler for the Exit menu item
+        private void MenuExit_Click(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
     }
 }
