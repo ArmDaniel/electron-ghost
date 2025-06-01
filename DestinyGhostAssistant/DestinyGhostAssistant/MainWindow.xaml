@@ -20,19 +20,35 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/> <!-- New: For Menu -->
+            <RowDefinition Height="Auto"/> <!-- For Logo/Header -->
+            <RowDefinition Height="*"/>    <!-- For Chat History -->
+            <RowDefinition Height="Auto"/> <!-- For Input Area -->
         </Grid.RowDefinitions>
 
+        <!-- Menu Area -->
+        <Menu Grid.Row="0">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New Chat" Command="{Binding NewChatCommand}" />
+                <Separator />
+                <MenuItem Header="_Save Chat..." Command="{Binding SaveChatCommand}" />
+                <MenuItem Header="_Load Chat..." Command="{Binding LoadChatCommand}" />
+                <Separator />
+                <MenuItem Header="_Settings..." Command="{Binding OpenSettingsCommand}" />
+                <Separator />
+                <MenuItem Header="E_xit" x:Name="MenuExit" Click="MenuExit_Click" />
+            </MenuItem>
+            <!-- Add other top-level menus like "_Edit", "_View", "_Help" if desired -->
+        </Menu>
+
         <!-- Logo Area -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="10" Background="#FFF0F0F0">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="10" Background="#FFF0F0F0">
             <Image Source="/Assets/GhostLogo.png" Width="40" Height="40" Margin="0,0,10,0" VerticalAlignment="Center"/>
             <TextBlock Text="Ghost Assistant" FontSize="20" VerticalAlignment="Center"/>
         </StackPanel>
 
         <!-- Chat History Area -->
-        <ScrollViewer Grid.Row="1" x:Name="ChatScrollViewer" VerticalScrollBarVisibility="Auto" Margin="10,0,10,0" Padding="0,5">
+        <ScrollViewer Grid.Row="2" x:Name="ChatScrollViewer" VerticalScrollBarVisibility="Auto" Margin="10,0,10,0" Padding="0,5">
             <ItemsControl ItemsSource="{Binding Messages}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type models:ChatMessage}">
@@ -54,7 +70,7 @@
         </ScrollViewer>
 
         <!-- Input Area -->
-        <Border Grid.Row="2" BorderThickness="0,1,0,0" BorderBrush="LightGray" Padding="10">
+        <Border Grid.Row="3" BorderThickness="0,1,0,0" BorderBrush="LightGray" Padding="10">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
