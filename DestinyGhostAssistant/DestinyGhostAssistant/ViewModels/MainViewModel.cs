@@ -73,7 +73,7 @@ namespace DestinyGhostAssistant.ViewModels
 
             Messages.CollectionChanged += (s, e) =>
             {
-                if (SaveChatCommand is RelayCommand saveCmd) saveCmd.RaiseCanExecuteChanged();
+                if (SaveChatCommand is RelayCommand saveCmd) { /* Removed RaiseCanExecuteChanged call as RelayCommand uses CommandManager.RequerySuggested */ }
             };
 
             // CurrentMessage property setter already handles SendMessageCommand.RaiseCanExecuteChanged implicitly via SetProperty
@@ -84,7 +84,7 @@ namespace DestinyGhostAssistant.ViewModels
             {
                 if (e.PropertyName == nameof(CurrentMessage))
                 {
-                    if (SendMessageCommand is RelayCommand sendCmd) sendCmd.RaiseCanExecuteChanged();
+                    // Removed RaiseCanExecuteChanged call as RelayCommand uses CommandManager.RequerySuggested
                 }
             };
 
@@ -361,7 +361,7 @@ namespace DestinyGhostAssistant.ViewModels
 
             try
             {
-                string modelToUse = _appSettings.SelectedOpenRouterModel ?? "gryphe/mythomax-l2-13b"; // Use setting with fallback
+                string modelToUse = _appSettings.SelectedOpenRouterModel ?? "nousresearch/deephermes-3-mistral-24b-preview:free"; // Use setting with fallback
                 string assistantResponseText = await _openRouterService.GetChatCompletionAsync(new List<OpenRouterMessage>(_conversationHistory), modelToUse);
 
                 ToolCallRequest? potentialToolCall = _toolExecutorService.TryParseToolCall(assistantResponseText);
