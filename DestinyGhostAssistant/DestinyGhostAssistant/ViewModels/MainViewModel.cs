@@ -18,14 +18,16 @@ namespace DestinyGhostAssistant.ViewModels
         public ObservableCollection<ChatMessage> Messages { get; }
 
         private string _currentMessage = string.Empty;
-
-        public string CurrentMessage { get => _currentMessage; set => SetProperty(ref _currentMessage, value); } // Simplified setter
+        public string CurrentMessage { get => _currentMessage; set => SetProperty(ref _currentMessage, value); }
 
         public ICommand SendMessageCommand { get; }
         public ICommand NewChatCommand { get; }
         public ICommand SaveChatCommand { get; }
         public ICommand LoadChatCommand { get; }
-        public ICommand OpenSettingsCommand { get; } // Added command
+        public ICommand OpenSettingsCommand { get; }
+        public ICommand CopyToClipboardCommand { get; } // Added command
+
+        public event EventHandler? RequestFocusOnInput;
 
         private bool _isSendingMessage;
         public bool IsSendingMessage
@@ -33,34 +35,42 @@ namespace DestinyGhostAssistant.ViewModels
             get => _isSendingMessage;
             private set
             {
+                if (SetProperty(ref _isSendingMessage, value))
+                {
+                    if (SendMessageCommand is RelayCommand sendCmd) sendCmd.RaiseCanExecuteChanged();
+                    if (SaveChatCommand is RelayCommand saveCmd) saveCmd.RaiseCanExecuteChanged();
+                    if (LoadChatCommand is RelayCommand loadCmd) loadCmd.RaiseCanExecuteChanged();
+                    if (NewChatCommand is RelayCommand newCmd) newCmd.RaiseCanExecuteChanged();
+                    if (OpenSettingsCommand is RelayCommand openSetCmd) openSetCmd.RaiseCanExecuteChanged();
 
-                SetProperty(ref _isSendingMessage, value);
-                // CommandManager.RequerySuggested will handle updating the CanExecute state
-                // for RelayCommand, so manual RaiseCanExecuteChanged is not needed here.
-
+                    if (!value) // If IsSendingMessage is being set to false
+                    {
+                        RequestFocusOnInput?.Invoke(this, EventArgs.Empty);
+                    }
+                }
             }
         }
 
         private readonly OpenRouterService _openRouterService;
         private readonly ToolExecutorService _toolExecutorService;
         private readonly ChatHistoryService _chatHistoryService;
-        private readonly SettingsService _settingsService; // Added service
-        private AppSettings _appSettings; // To store loaded settings
+        private readonly SettingsService _settingsService;
+        private AppSettings _appSettings;
         private readonly List<OpenRouterMessage> _conversationHistory;
         private const int MaxHistoryMessages = 20;
-        private string _systemPromptString; // No longer readonly, will be updated
+        private string _systemPromptString;
+        private ChatMessage? _thinkingMessage; // Field for the "Thinking..." message instance
 
         public MainViewModel()
         {
             Messages = new ObservableCollection<ChatMessage>();
             _conversationHistory = new List<OpenRouterMessage>();
 
-            _settingsService = new SettingsService(); // Instantiate SettingsService
-            _appSettings = _settingsService.LoadSettings(); // Load settings
+            _settingsService = new SettingsService();
+            _appSettings = _settingsService.LoadSettings();
 
-            // ToolExecutorService needs to be initialized before building system prompt if tools are dynamic
             _toolExecutorService = new ToolExecutorService(this);
-            _systemPromptString = BuildInitialSystemPrompt(); // Build/load system prompt
+            _systemPromptString = BuildInitialSystemPrompt();
 
             _openRouterService = new OpenRouterService(App.OpenRouterApiKey);
             _chatHistoryService = new ChatHistoryService();
@@ -69,17 +79,14 @@ namespace DestinyGhostAssistant.ViewModels
             NewChatCommand = new RelayCommand(StartNewChatUserAction, () => !IsSendingMessage);
             SaveChatCommand = new RelayCommand(async () => await SaveChatAsync(), () => Messages.Any() && !IsSendingMessage);
             LoadChatCommand = new RelayCommand(async () => await LoadChatListAndPromptAsync(), () => !IsSendingMessage);
-            OpenSettingsCommand = new RelayCommand(OpenSettingsWindow, () => !IsSendingMessage); // Initialize command
+            OpenSettingsCommand = new RelayCommand(OpenSettingsWindow, () => !IsSendingMessage);
+            CopyToClipboardCommand = new RelayCommand<string?>(CopyTextToClipboard, CanCopyTextToClipboard); // Initialize command
 
             Messages.CollectionChanged += (s, e) =>
             {
                 if (SaveChatCommand is RelayCommand saveCmd) { /* Removed RaiseCanExecuteChanged call as RelayCommand uses CommandManager.RequerySuggested */ }
             };
 
-            // CurrentMessage property setter already handles SendMessageCommand.RaiseCanExecuteChanged implicitly via SetProperty
-            // if RelayCommand uses CommandManager.RequerySuggested by default, or if we add it to CurrentMessage setter.
-            // For simplicity, explicitly updating in IsSendingMessage setter covers most cases for now.
-            // Explicitly handle CanExecute changes in property setters if specific dependencies are needed.
             PropertyChanged += (s, e) =>
             {
                 if (e.PropertyName == nameof(CurrentMessage))
@@ -88,7 +95,6 @@ namespace DestinyGhostAssistant.ViewModels
                 }
             };
 
-
             StartNewChatSession(isUserAction: false);
         }
 
@@ -96,8 +102,6 @@ namespace DestinyGhostAssistant.ViewModels
         {
             if (!string.IsNullOrWhiteSpace(_appSettings.CustomSystemPrompt))
             {
-                // For now, if custom prompt is provided, it *replaces* the entire default.
-                // Future refinement: append tool list to custom prompt if it doesn't seem to include tool instructions.
                 return _appSettings.CustomSystemPrompt;
             }
             else
@@ -116,7 +120,7 @@ namespace DestinyGhostAssistant.ViewModels
                 systemPromptBuilder.AppendLine();
                 systemPromptBuilder.AppendLine("Available tools:");
 
-                var availableTools = _toolExecutorService.GetAvailableTools(); // ToolExecutorService must be initialized
+                var availableTools = _toolExecutorService.GetAvailableTools();
                 if (availableTools.Any())
                 {
                     foreach (var tool in availableTools)
@@ -135,7 +139,7 @@ namespace DestinyGhostAssistant.ViewModels
 
         private void OpenSettingsWindow()
         {
-            IsSendingMessage = true; // Use IsSendingMessage to disable other actions
+            IsSendingMessage = true;
             var settingsWindow = new DestinyGhostAssistant.Views.SettingsWindow();
             if (Application.Current.MainWindow != null && Application.Current.MainWindow.IsVisible)
             {
@@ -146,19 +150,12 @@ namespace DestinyGhostAssistant.ViewModels
 
             if (result == true)
             {
-                _appSettings = _settingsService.LoadSettings(); // Reload settings
-                _systemPromptString = BuildInitialSystemPrompt(); // Re-build system prompt based on new settings
-
-                // Inform user. For system prompt changes to take effect in an *active* chat,
-                // the chat would need to be reset or the system message in _conversationHistory updated.
+                _appSettings = _settingsService.LoadSettings();
+                _systemPromptString = BuildInitialSystemPrompt();
                 AddSystemMessage("Settings saved. System prompt changes will apply to new chats. Model changes apply immediately to next request.");
-                // Optionally, force a new chat to apply system prompt:
-                // StartNewChatSession(isUserAction: false);
-                // AddSystemMessage("New chat started to apply updated system prompt.");
             }
             IsSendingMessage = false;
         }
-
 
         private async Task SaveChatAsync()
         {
@@ -199,6 +196,28 @@ namespace DestinyGhostAssistant.ViewModels
             }
         }
 
+        private void CopyTextToClipboard(string? textToCopy)
+        {
+            if (!string.IsNullOrEmpty(textToCopy))
+            {
+                try
+                {
+                    Application.Current.Dispatcher.Invoke(() => Clipboard.SetText(textToCopy));
+                    AddSystemMessage("Assistant's message copied to clipboard!");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error copying to clipboard: {ex.Message}");
+                    AddSystemMessage("Error: Could not copy message to clipboard.");
+                }
+            }
+        }
+
+        private bool CanCopyTextToClipboard(string? textToCopy)
+        {
+            return !string.IsNullOrEmpty(textToCopy);
+        }
+
         private async Task LoadChatListAndPromptAsync()
         {
             IsSendingMessage = true;
@@ -210,7 +229,7 @@ namespace DestinyGhostAssistant.ViewModels
                 if (availableChats == null || !availableChats.Any())
                 {
                     AddSystemMessage("No saved chats found.");
-                    return;
+                    return; // Return here so IsSendingMessage is set to false in finally
                 }
 
                 var loadDialog = new DestinyGhostAssistant.Views.LoadChatDialog(availableChats);
@@ -254,6 +273,31 @@ namespace DestinyGhostAssistant.ViewModels
             });
         }
 
+        // Helper to add the exact ChatMessage object instance to the UI
+        private void AddChatMessageObject(ChatMessage message)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                Messages.Add(message);
+            });
+        }
+
+        // Helper to remove the exact ChatMessage object instance from the UI
+        private void RemoveChatMessageObject(ChatMessage? message)
+        {
+            if (message != null)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    if (Messages.Contains(message)) // Check if it's still there before removing
+                    {
+                        Messages.Remove(message);
+                    }
+                });
+            }
+        }
+
+
         public void AddSystemMessage(string message)
         {
             AddMessage(message, MessageSender.System);
@@ -267,13 +311,11 @@ namespace DestinyGhostAssistant.ViewModels
             }
             Messages.Clear();
             _conversationHistory.Clear();
-            // Ensure _systemPromptString is initialized before this is called.
-            // Constructor order: _settingsService, _appSettings, _toolExecutorService, _systemPromptString, then StartNewChatSession.
-            if(_systemPromptString != null) // Guard against null if called before constructor fully sets it (unlikely here)
+            if(_systemPromptString != null)
             {
                  _conversationHistory.Add(new OpenRouterMessage { Role = "system", Content = _systemPromptString });
             }
-            else // Fallback just in case, though should not happen with current constructor order
+            else
             {
                 _conversationHistory.Add(new OpenRouterMessage { Role = "system", Content = "You are a helpful assistant." });
                 AddSystemMessage("Error: System prompt not initialized. Using a very basic default.");
@@ -289,12 +331,11 @@ namespace DestinyGhostAssistant.ViewModels
             {
                 _conversationHistory.Add(new OpenRouterMessage { Role = "system", Content = _systemPromptString });
             }
-            else // Fallback
+            else
             {
                  _conversationHistory.Add(new OpenRouterMessage { Role = "system", Content = "You are a helpful assistant." });
                  AddSystemMessage("Error: System prompt not initialized for populating chat. Using a very basic default.");
             }
-
 
             foreach (var loadedMsg in messagesToLoad)
             {
@@ -359,10 +400,19 @@ namespace DestinyGhostAssistant.ViewModels
             _conversationHistory.Add(new OpenRouterMessage { Role = "user", Content = userMessageText });
             CurrentMessage = string.Empty;
 
+            // Add "Thinking..." message
+            _thinkingMessage = new ChatMessage("Ghost is thinking...", MessageSender.System);
+            AddChatMessageObject(_thinkingMessage); // Use helper to add the exact instance
+
             try
             {
                 string modelToUse = _appSettings.SelectedOpenRouterModel ?? "nousresearch/deephermes-3-mistral-24b-preview:free"; // Use setting with fallback
+
                 string assistantResponseText = await _openRouterService.GetChatCompletionAsync(new List<OpenRouterMessage>(_conversationHistory), modelToUse);
+
+                // Remove "Thinking..." message BEFORE adding the actual response or processing tools
+                RemoveChatMessageObject(_thinkingMessage);
+                _thinkingMessage = null;
 
                 ToolCallRequest? potentialToolCall = _toolExecutorService.TryParseToolCall(assistantResponseText);
                 string processingResult = await _toolExecutorService.ProcessAssistantResponseForToolsAsync(assistantResponseText);
@@ -371,6 +421,7 @@ namespace DestinyGhostAssistant.ViewModels
                 {
                     _conversationHistory.Add(new OpenRouterMessage { Role = "assistant", Content = assistantResponseText });
                     _conversationHistory.Add(new OpenRouterMessage { Role = "user", Content = $"Tool output: {processingResult}" });
+                    // UI messages for tool execution are handled by ToolExecutorService via AddSystemMessage
                 }
                 else
                 {
@@ -382,11 +433,16 @@ namespace DestinyGhostAssistant.ViewModels
             }
             catch (System.Exception ex)
             {
+                RemoveChatMessageObject(_thinkingMessage); // Ensure removal on error too
+                _thinkingMessage = null;
                 AddSystemMessage($"Error during message processing or API call: {ex.Message}");
             }
             finally
             {
-                IsSendingMessage = false;
+                // Safeguard: Ensure thinking message is removed if it somehow persisted (e.g., due to an unhandled exception path before finally)
+                RemoveChatMessageObject(_thinkingMessage);
+                _thinkingMessage = null;
+                IsSendingMessage = false; // This will trigger CanExecuteChanged for commands
             }
         }
 

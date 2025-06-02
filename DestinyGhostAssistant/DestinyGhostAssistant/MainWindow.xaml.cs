@@ -2,7 +2,6 @@ using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Controls; // Required for ScrollViewer
 using System.Windows.Input; // Required for KeyEventArgs
-using System.Windows.Media; // Required for VisualTreeHelper
 using DestinyGhostAssistant.ViewModels; // Required for MainViewModel
 
 namespace DestinyGhostAssistant
@@ -29,10 +28,17 @@ namespace DestinyGhostAssistant
                 if (viewModel.Messages is INotifyCollectionChanged notifyCollection)
                 {
                     notifyCollection.CollectionChanged += Messages_CollectionChanged;
-                    // Initial scroll to bottom in case there are already messages (e.g. welcome message)
-                    ScrollChatToBottom();
                 }
+                viewModel.RequestFocusOnInput += ViewModel_RequestFocusOnInput; // Subscribe to event
+                // Initial scroll to bottom & focus
+                ScrollChatToBottom();
+                Dispatcher.Invoke(() => MessageInputTextBox.Focus()); // Initial focus on load
             }
+        }
+
+        private void ViewModel_RequestFocusOnInput(object? sender, EventArgs e)
+        {
+            Dispatcher.Invoke(() => MessageInputTextBox.Focus());
         }
 
         private void Messages_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -90,6 +96,7 @@ namespace DestinyGhostAssistant
                 {
                     notifyCollection.CollectionChanged -= Messages_CollectionChanged;
                 }
+                viewModel.RequestFocusOnInput -= ViewModel_RequestFocusOnInput; // Unsubscribe from event
             }
             Loaded -= MainWindow_Loaded;
         }
