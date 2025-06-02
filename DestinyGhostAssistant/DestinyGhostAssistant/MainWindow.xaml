@@ -16,6 +16,7 @@
 
     <Window.Resources>
         <utils:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+        <utils:AssistantMessageVisibilityConverter x:Key="AssistantMessageVisibilityConverter"/>
     </Window.Resources>
 
     <Grid>
@@ -60,8 +61,13 @@
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
                                 <TextBlock Grid.Row="0" FontWeight="Bold" Text="{Binding SenderDisplay}" Margin="0,0,0,2"/>
-                                <TextBlock Grid.Row="1" Text="{Binding Text}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Row="1" Text="{Binding Text}" TextWrapping="Wrap" />
                                 <TextBlock Grid.Row="2" Text="{Binding Timestamp, StringFormat='hh:mm tt'}" FontSize="10" HorizontalAlignment="Right" Opacity="0.7" Margin="0,2,0,0"/>
+                                <Button Grid.Row="1" Grid.RowSpan="2" VerticalAlignment="Bottom" HorizontalAlignment="Right"
+                                        Content="Copy" FontSize="10" Padding="3,1" Margin="0,5,0,0"
+                                        Command="{Binding DataContext.CopyToClipboardCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                        CommandParameter="{Binding Text}"
+                                        Visibility="{Binding Sender, Converter={StaticResource AssistantMessageVisibilityConverter}}" />
                             </Grid>
                         </Border>
                     </DataTemplate>
