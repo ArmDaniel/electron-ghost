@@ -107,10 +107,12 @@ namespace DestinyGhostAssistant.Services
 
             if (toolCallRequest != null)
             {
+                System.Diagnostics.Debug.WriteLine($"[ToolExecutorService] Parsed tool call: Name='{toolCallRequest.ToolName}', Parameters='{JsonSerializer.Serialize(toolCallRequest.Parameters, _jsonSerializerOptions)}'");
                 _mainViewModel.AddSystemMessage($"Ghost is attempting to use tool: '{toolCallRequest.ToolName}'.");
 
                 if (_tools.TryGetValue(toolCallRequest.ToolName, out ITool? tool))
                 {
+                    System.Diagnostics.Debug.WriteLine($"[ToolExecutorService] Found tool '{tool.Name}' in registered tools.");
                     bool confirmed = true; // Default to true if no confirmation needed
                     if (NeedsConfirmation(tool.Name))
                     {
@@ -129,27 +131,46 @@ namespace DestinyGhostAssistant.Services
                              _mainViewModel.AddSystemMessage($"Executing tool: {tool.Name}...");
                         }
 
-                        string executionResult = await tool.ExecuteAsync(toolCallRequest.Parameters); // Actual execution
-                        // string executionResult = $"Placeholder: Tool '{tool.Name}' executed successfully with parameters: {JsonSerializer.Serialize(toolCallRequest.Parameters)}."; // Placeholder removed
+                        string executionResult;
+                        try
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[ToolExecutorService] Executing tool '{tool.Name}' with parameters: {JsonSerializer.Serialize(toolCallRequest.Parameters, _jsonSerializerOptions)}");
+                            executionResult = await tool.ExecuteAsync(toolCallRequest.Parameters);
+                            System.Diagnostics.Debug.WriteLine($"[ToolExecutorService] Tool '{tool.Name}' execution result: {executionResult.Substring(0, Math.Min(executionResult.Length, 100))}...");
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[ToolExecutorService] Exception during tool '{tool.Name}' execution: {ex.ToString()}");
+                            executionResult = $"Error executing tool '{tool.Name}': {ex.Message}";
+                            // Also add to UI for visibility of this unexpected tool error
+                            _mainViewModel.AddSystemMessage($"Critical error during execution of tool '{tool.Name}': {ex.Message}");
+                        }
 
                         _mainViewModel.AddSystemMessage($"Tool '{tool.Name}' result: {executionResult}");
-                        return executionResult; // This might be fed back to the AI in a subsequent call
+                        return executionResult;
                     }
                     else
                     {
                         _mainViewModel.AddSystemMessage($"Tool '{tool.Name}' execution denied by user.");
+                        System.Diagnostics.Debug.WriteLine($"[ToolExecutorService] Tool '{tool.Name}' execution denied by user.");
                         return $"User denied execution for tool {tool.Name}.";
                     }
                 }
                 else
                 {
                     _mainViewModel.AddSystemMessage($"Unknown tool requested: '{toolCallRequest.ToolName}'.");
+                    System.Diagnostics.Debug.WriteLine($"[ToolExecutorService] Unknown tool requested: '{toolCallRequest.ToolName}'.");
                     return $"Assistant requested an unknown tool: '{toolCallRequest.ToolName}'.";
                 }
             }
             else
             {
                 // Not a tool call, return the original assistant message
+                // Log if assistantResponseContent was not empty but not a tool call, to see what it was.
+                if(!string.IsNullOrWhiteSpace(assistantResponseContent))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ToolExecutorService] No tool call parsed. Assistant response: {assistantResponseContent.Substring(0, Math.Min(assistantResponseContent.Length,100))}...");
+                }
                 return assistantResponseContent;
             }
         }

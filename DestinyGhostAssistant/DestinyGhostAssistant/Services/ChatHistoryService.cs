@@ -122,28 +122,46 @@ namespace DestinyGhostAssistant.Services
 
             try
             {
+                Debug.WriteLine($"ChatHistoryService: Attempting to load chat '{chatName}' from path '{filePath}'.");
+
                 if (!File.Exists(filePath))
                 {
                     Debug.WriteLine($"ChatHistoryService: Chat file not found: {filePath}");
                     return null;
                 }
+                Debug.WriteLine($"ChatHistoryService: File exists: {filePath}");
 
                 string json = await File.ReadAllTextAsync(filePath);
+                Debug.WriteLine($"ChatHistoryService: Read {json.Length} characters from {filePath}. Snippet: {json.Substring(0, Math.Min(json.Length, 200))}");
+
                 if (string.IsNullOrWhiteSpace(json))
                 {
-                     Debug.WriteLine($"ChatHistoryService: Chat file is empty or whitespace: {filePath}");
+                     Debug.WriteLine($"ChatHistoryService: Chat file is empty or whitespace: {filePath}. Returning empty list.");
                      return new List<ChatMessage>(); // Return empty list for empty file
                 }
 
-                List<ChatMessage>? messages = JsonSerializer.Deserialize<List<ChatMessage>>(json, _jsonSerializerOptions);
-                Debug.WriteLine($"ChatHistoryService: Chat '{chatName}' loaded from {filePath}");
-                return messages ?? new List<ChatMessage>(); // Ensure null deserialization returns empty list
+                List<ChatMessage>? messages = null;
+                try
+                {
+                    messages = JsonSerializer.Deserialize<List<ChatMessage>>(json, _jsonSerializerOptions);
+                }
+                catch (JsonException jsonEx)
+                {
+                    Debug.WriteLine($"ChatHistoryService: JSON deserialization error for '{chatName}'. Error: {jsonEx.Message}. JSON: {json.Substring(0, Math.Min(json.Length, 500))}");
+                    return null; // Indicate error by returning null
+                }
+
+                if (messages == null)
+                {
+                    Debug.WriteLine($"ChatHistoryService: JSON deserialized to null for '{chatName}'. Returning empty list. JSON: {json.Substring(0, Math.Min(json.Length, 500))}");
+                    return new List<ChatMessage>(); // File had "null" literal or similar
+                }
+
+                Debug.WriteLine($"ChatHistoryService: Chat '{chatName}' loaded successfully from {filePath}. Message count: {messages.Count}.");
+                return messages;
             }
-            catch (JsonException ex)
-            {
-                Debug.WriteLine($"ChatHistoryService: JSON deserialization error while loading chat '{chatName}' from {filePath}. Error: {ex.Message}");
-                return null; // Indicate error by returning null
-            }
+            // Catching JsonException specifically for deserialization above.
+            // Other exceptions like IOException, UnauthorizedAccessException are caught below.
             catch (IOException ex)
             {
                 Debug.WriteLine($"ChatHistoryService: IOException while loading chat '{chatName}' from {filePath}. Error: {ex.Message}");

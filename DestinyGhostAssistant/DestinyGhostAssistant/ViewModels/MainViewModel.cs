@@ -84,14 +84,14 @@ namespace DestinyGhostAssistant.ViewModels
 
             Messages.CollectionChanged += (s, e) =>
             {
-                if (SaveChatCommand is RelayCommand saveCmd) { /* Removed RaiseCanExecuteChanged call as RelayCommand uses CommandManager.RequerySuggested */ }
+                if (SaveChatCommand is RelayCommand saveCmd) saveCmd.RaiseCanExecuteChanged();
             };
 
             PropertyChanged += (s, e) =>
             {
                 if (e.PropertyName == nameof(CurrentMessage))
                 {
-                    // Removed RaiseCanExecuteChanged call as RelayCommand uses CommandManager.RequerySuggested
+                    if (SendMessageCommand is RelayCommand sendCmd) sendCmd.RaiseCanExecuteChanged();
                 }
             };
 
@@ -222,13 +222,16 @@ namespace DestinyGhostAssistant.ViewModels
         {
             IsSendingMessage = true;
             AddSystemMessage("Fetching list of saved chats...");
+            System.Diagnostics.Debug.WriteLine("[MainViewModel] LoadChatListAndPromptAsync: Fetching chat list.");
             try
             {
                 List<string> availableChats = await _chatHistoryService.GetAvailableChatsAsync();
+                System.Diagnostics.Debug.WriteLine($"[MainViewModel] LoadChatListAndPromptAsync: Found {availableChats?.Count ?? 0} available chats. Chats: {string.Join(", ", availableChats ?? new List<string>())}");
 
                 if (availableChats == null || !availableChats.Any())
                 {
                     AddSystemMessage("No saved chats found.");
+                    System.Diagnostics.Debug.WriteLine("[MainViewModel] LoadChatListAndPromptAsync: No saved chats found or list is null.");
                     return; // Return here so IsSendingMessage is set to false in finally
                 }
 
@@ -241,17 +244,19 @@ namespace DestinyGhostAssistant.ViewModels
                 if (loadDialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(loadDialog.SelectedChatName))
                 {
                     string chatToLoad = loadDialog.SelectedChatName;
+                    System.Diagnostics.Debug.WriteLine($"[MainViewModel] LoadChatListAndPromptAsync: User selected chat '{chatToLoad}'. Calling LoadChatAsync.");
                     await LoadChatAsync(chatToLoad);
                 }
                 else
                 {
                     AddSystemMessage("Load chat cancelled by user or no chat selected.");
+                    System.Diagnostics.Debug.WriteLine("[MainViewModel] LoadChatListAndPromptAsync: Load chat dialog cancelled or no selection.");
                 }
             }
             catch (Exception ex)
             {
                 AddSystemMessage($"Error fetching chat list: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"LoadChatListAndPromptAsync Exception: {ex}");
+                System.Diagnostics.Debug.WriteLine($"[MainViewModel] LoadChatListAndPromptAsync Exception: {ex}");
             }
             finally
             {
@@ -310,52 +315,67 @@ namespace DestinyGhostAssistant.ViewModels
                 AddSystemMessage("Starting new chat session...");
             }
             Messages.Clear();
+            System.Diagnostics.Debug.WriteLine("[MainViewModel] StartNewChatSession: Cleared Messages collection.");
             _conversationHistory.Clear();
+            System.Diagnostics.Debug.WriteLine("[MainViewModel] StartNewChatSession: Cleared _conversationHistory.");
             if(_systemPromptString != null)
             {
                  _conversationHistory.Add(new OpenRouterMessage { Role = "system", Content = _systemPromptString });
+                 System.Diagnostics.Debug.WriteLine("[MainViewModel] StartNewChatSession: Added system prompt to _conversationHistory.");
             }
             else
             {
                 _conversationHistory.Add(new OpenRouterMessage { Role = "system", Content = "You are a helpful assistant." });
                 AddSystemMessage("Error: System prompt not initialized. Using a very basic default.");
+                System.Diagnostics.Debug.WriteLine("[MainViewModel] StartNewChatSession: ERROR - _systemPromptString was null, added basic default.");
             }
             AddMessage("Welcome, Guardian! Ghost at your service. How can I assist you today?", MessageSender.Assistant);
         }
 
         private void PopulateChat(IEnumerable<ChatMessage> messagesToLoad, string loadedChatName)
         {
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] PopulateChat: Loading chat '{loadedChatName}'. Message count to load: {messagesToLoad.Count()}");
             Messages.Clear();
+            System.Diagnostics.Debug.WriteLine("[MainViewModel] PopulateChat: Cleared Messages collection.");
             _conversationHistory.Clear();
+            System.Diagnostics.Debug.WriteLine("[MainViewModel] PopulateChat: Cleared _conversationHistory.");
+
             if(_systemPromptString != null)
             {
                 _conversationHistory.Add(new OpenRouterMessage { Role = "system", Content = _systemPromptString });
+                System.Diagnostics.Debug.WriteLine($"[MainViewModel] PopulateChat: Added system prompt to _conversationHistory. Length: {_systemPromptString.Length}");
             }
             else
             {
                  _conversationHistory.Add(new OpenRouterMessage { Role = "system", Content = "You are a helpful assistant." });
                  AddSystemMessage("Error: System prompt not initialized for populating chat. Using a very basic default.");
+                 System.Diagnostics.Debug.WriteLine("[MainViewModel] PopulateChat: ERROR - _systemPromptString was null, added basic default for _conversationHistory.");
             }
 
             foreach (var loadedMsg in messagesToLoad)
             {
+                System.Diagnostics.Debug.WriteLine($"[MainViewModel] PopulateChat: Adding to UI: [{loadedMsg.Timestamp}] {loadedMsg.Sender}: {loadedMsg.Text.Substring(0, Math.Min(loadedMsg.Text.Length, 50))}");
                 AddMessage(loadedMsg.Text, loadedMsg.Sender, loadedMsg.Timestamp);
 
-                string role = "user";
-                if (loadedMsg.Sender == MessageSender.Assistant) role = "assistant";
                 if (loadedMsg.Sender != MessageSender.System)
                 {
-                     _conversationHistory.Add(new OpenRouterMessage { Role = role, Content = loadedMsg.Text });
+                    string role = (loadedMsg.Sender == MessageSender.Assistant) ? "assistant" : "user";
+                    _conversationHistory.Add(new OpenRouterMessage { Role = role, Content = loadedMsg.Text });
+                    System.Diagnostics.Debug.WriteLine($"[MainViewModel] PopulateChat: Added to API history: Role={role}, Content Snippet: {loadedMsg.Text.Substring(0, Math.Min(loadedMsg.Text.Length, 50))}");
                 }
             }
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] PopulateChat: UI Messages count: {Messages.Count}, API History count: {_conversationHistory.Count}");
             TruncateConversationHistory();
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] PopulateChat: After truncation, API History count: {_conversationHistory.Count}");
         }
 
         public async Task LoadChatAsync(string chatName)
         {
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] LoadChatAsync: Attempting to load chat '{chatName}'.");
             if (string.IsNullOrWhiteSpace(chatName))
             {
                 AddSystemMessage("Chat name cannot be empty to load.");
+                System.Diagnostics.Debug.WriteLine("[MainViewModel] LoadChatAsync: Chat name is null or whitespace.");
                 return;
             }
 
@@ -366,18 +386,21 @@ namespace DestinyGhostAssistant.ViewModels
                 List<ChatMessage>? loadedMessages = await _chatHistoryService.LoadChatAsync(chatName);
                 if (loadedMessages != null)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[MainViewModel] LoadChatAsync: Successfully loaded {loadedMessages.Count} messages for chat '{chatName}' from service.");
                     PopulateChat(loadedMessages, chatName);
                     AddSystemMessage($"Chat '{chatName}' loaded successfully.");
                 }
                 else
                 {
-                    AddSystemMessage($"Failed to load chat: {chatName}. Starting a new chat session.");
+                    AddSystemMessage($"Failed to load chat: {chatName}. Chat not found or empty. Starting a new chat session.");
+                    System.Diagnostics.Debug.WriteLine($"[MainViewModel] LoadChatAsync: Failed to load chat '{chatName}' (service returned null or empty list). Starting new chat.");
                     StartNewChatSession(isUserAction: false);
                 }
             }
             catch (Exception ex)
             {
                 AddSystemMessage($"An error occurred while loading chat '{chatName}': {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[MainViewModel] LoadChatAsync: Exception while loading chat '{chatName}'. Error: {ex.Message}");
                 StartNewChatSession(isUserAction: false);
             }
             finally
@@ -406,8 +429,7 @@ namespace DestinyGhostAssistant.ViewModels
 
             try
             {
-                string modelToUse = _appSettings.SelectedOpenRouterModel ?? "nousresearch/deephermes-3-mistral-24b-preview:free"; // Use setting with fallback
-
+                string modelToUse = _appSettings.SelectedOpenRouterModel ?? "gryphe/mythomax-l2-13b";
                 string assistantResponseText = await _openRouterService.GetChatCompletionAsync(new List<OpenRouterMessage>(_conversationHistory), modelToUse);
 
                 // Remove "Thinking..." message BEFORE adding the actual response or processing tools

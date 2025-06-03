@@ -12,16 +12,16 @@ namespace DestinyGhostAssistant.Views
     public partial class SettingsWindow : Window
     {
         private readonly SettingsService _settingsService;
-        private AppSettings _currentSettings = new AppSettings();
+        private AppSettings _currentSettings;
 
         // Predefined list of common OpenRouter models
         private readonly List<string> _predefinedModels = new List<string>
         {
-            "nousresearch/deephermes-3-mistral-24b-preview:free",
-            "qwen/qwen3-235b-a22b:free",
-            "meta-llama/llama-4-maverick:free",
-            "mistralai/mistral-small-3.1-24b-instruct:free",
-            "deepseek/deepseek-r1-0528:free"
+            "gryphe/mythomax-l2-13b",
+            "google/gemma-7b-it",
+            "mistralai/mistral-7b-instruct",
+            "meta-llama/llama-2-13b-chat",
+            "openai/gpt-3.5-turbo" // Example, user needs own OpenAI key for this via OpenRouter
         };
 
         public SettingsWindow()
