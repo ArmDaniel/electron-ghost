@@ -429,7 +429,7 @@ namespace DestinyGhostAssistant.ViewModels
 
             try
             {
-                string modelToUse = _appSettings.SelectedOpenRouterModel ?? "gryphe/mythomax-l2-13b";
+                string modelToUse = _appSettings.SelectedOpenRouterModel ?? "nousresearch/deephermes-3-mistral-24b-preview:free";
                 string assistantResponseText = await _openRouterService.GetChatCompletionAsync(new List<OpenRouterMessage>(_conversationHistory), modelToUse);
 
                 // Remove "Thinking..." message BEFORE adding the actual response or processing tools
