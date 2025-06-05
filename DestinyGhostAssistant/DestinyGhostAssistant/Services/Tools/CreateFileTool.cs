@@ -37,12 +37,15 @@ namespace DestinyGhostAssistant.Services.Tools
 
 
             // Basic path validation (more robust validation might be needed for production)
+            System.Diagnostics.Debug.WriteLine($"CreateFileTool: Validating path: '{filePath}'");
             if (filePath.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
             {
+                System.Diagnostics.Debug.WriteLine($"CreateFileTool: Path '{filePath}' contains invalid path characters.");
                 return $"Error: The provided path '{filePath}' contains invalid path characters.";
             }
             try
             {
+                System.Diagnostics.Debug.WriteLine($"CreateFileTool: Attempting to process file: '{filePath}'. Content length: {fileContent.Length}.");
                 // Ensure filename is valid
                 string? fileName = Path.GetFileName(filePath);
                 if (string.IsNullOrWhiteSpace(fileName) || fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
@@ -51,45 +54,56 @@ namespace DestinyGhostAssistant.Services.Tools
                 }
 
                 string? directoryPath = Path.GetDirectoryName(filePath);
+                System.Diagnostics.Debug.WriteLine($"CreateFileTool: Determined directory path: '{directoryPath ?? "current (null)"}'.");
 
-                // If directoryPath is null, it means filePath is just a filename (relative to current dir).
-                // If directoryPath is empty string, it means filePath is a root path like "C:file.txt" (unlikely for user input but possible).
-                // We allow file creation in current directory if directoryPath is null or empty after GetDirectoryName.
                 if (!string.IsNullOrEmpty(directoryPath))
                 {
                     if (!Directory.Exists(directoryPath))
                     {
+                        System.Diagnostics.Debug.WriteLine($"CreateFileTool: Directory '{directoryPath}' does not exist. Attempting to create.");
                         Directory.CreateDirectory(directoryPath);
+                        System.Diagnostics.Debug.WriteLine($"CreateFileTool: Directory '{directoryPath}' created.");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"CreateFileTool: Directory '{directoryPath}' already exists.");
                     }
                 }
 
+                System.Diagnostics.Debug.WriteLine($"CreateFileTool: Attempting to write content to file '{filePath}'.");
                 await File.WriteAllTextAsync(filePath, fileContent);
-                return $"Successfully created file '{Path.GetFullPath(filePath)}'.";
+                string successMsg = $"Successfully created file '{Path.GetFullPath(filePath)}'.";
+                System.Diagnostics.Debug.WriteLine($"CreateFileTool: {successMsg}");
+                return successMsg;
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException uae)
             {
-                return $"Error: Access denied. You do not have permission to create the file at '{filePath}'.";
+                System.Diagnostics.Debug.WriteLine($"CreateFileTool: UnauthorizedAccessException for '{filePath}'. {uae.Message}");
+                return $"Error: Access denied. You do not have permission to create the file at '{filePath}'. {uae.Message}";
             }
-            catch (PathTooLongException)
+            catch (PathTooLongException ptle)
             {
-                return $"Error: The specified path '{filePath}' is too long.";
+                System.Diagnostics.Debug.WriteLine($"CreateFileTool: PathTooLongException for '{filePath}'. {ptle.Message}");
+                return $"Error: The specified path '{filePath}' is too long. {ptle.Message}";
             }
-            catch (DirectoryNotFoundException)
+            catch (DirectoryNotFoundException dnfe)
             {
-                // This might happen if GetDirectoryName returns a valid-looking path but it's on an unmapped drive, etc.
-                // Or if CreateDirectory fails silently and WriteAllTextAsync then finds it missing.
-                return $"Error: The directory path for '{filePath}' could not be found or accessed. Ensure the path is correct.";
+                System.Diagnostics.Debug.WriteLine($"CreateFileTool: DirectoryNotFoundException for '{filePath}'. {dnfe.Message}");
+                return $"Error: The directory path for '{filePath}' could not be found or accessed. Ensure the path is correct. {dnfe.Message}";
             }
-            catch (IOException ex)
+            catch (IOException ioe)
             {
-                return $"Error: An IO exception occurred while creating the file '{filePath}'. Details: {ex.Message}";
+                System.Diagnostics.Debug.WriteLine($"CreateFileTool: IOException for '{filePath}'. {ioe.Message}");
+                return $"Error: An IO exception occurred while creating the file '{filePath}'. Details: {ioe.Message}";
             }
-            catch (ArgumentException ex) // Can be thrown by Path methods for invalid chars
+            catch (ArgumentException ae)
             {
-                return $"Error: The path or filename is invalid. Details: {ex.Message}";
+                System.Diagnostics.Debug.WriteLine($"CreateFileTool: ArgumentException for '{filePath}'. {ae.Message}");
+                return $"Error: The path or filename is invalid. Details: {ae.Message}";
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"CreateFileTool: Unexpected Exception for '{filePath}'. {ex.ToString()}");
                 return $"Error: An unexpected error occurred while creating file '{filePath}'. Details: {ex.Message}";
             }
         }

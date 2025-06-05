@@ -12,7 +12,7 @@ namespace DestinyGhostAssistant.Views
     public partial class SettingsWindow : Window
     {
         private readonly SettingsService _settingsService;
-        private AppSettings _currentSettings = new AppSettings();
+        private AppSettings _currentSettings;
 
         // Predefined list of common OpenRouter models
         private readonly List<string> _predefinedModels = new List<string>
