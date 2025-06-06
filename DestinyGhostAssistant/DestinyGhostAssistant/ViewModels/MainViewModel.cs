@@ -70,7 +70,7 @@ namespace DestinyGhostAssistant.ViewModels
                 }
             }
         }
-        public string AttachedProcessDisplay => AttachedProcess != null ? $"Attached to: {AttachedProcess.ProcessName} (PID: {AttachedProcess.Id})" : "Attached to: None";
+        public string AttachedProcessDisplay => AttachedProcess != null ? $"Attached to: {AttachedProcess.DisplayName}" : "Attached to: None";
 
         private readonly List<OpenRouterMessage> _conversationHistory;
         private const int MaxHistoryMessages = 20;

@@ -7,13 +7,15 @@ namespace DestinyGhostAssistant.Models
         public int Id { get; }
         public string ProcessName { get; }
         public string MainWindowTitle { get; }
+        public IntPtr MainWindowHandle { get; } // Added property
         public string DisplayName { get; }
 
-        public ProcessInfo(int id, string processName, string mainWindowTitle)
+        public ProcessInfo(int id, string processName, string mainWindowTitle, IntPtr mainWindowHandle)
         {
             Id = id;
-            ProcessName = processName ?? string.Empty; // Ensure ProcessName is not null
-            MainWindowTitle = mainWindowTitle ?? string.Empty; // Ensure MainWindowTitle is not null
+            ProcessName = processName ?? string.Empty;
+            MainWindowTitle = mainWindowTitle ?? string.Empty;
+            MainWindowHandle = mainWindowHandle; // Initialize new property
 
             // Construct DisplayName
             string PName = string.IsNullOrWhiteSpace(ProcessName) ? "UnknownProcess" : ProcessName;
