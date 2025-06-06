@@ -81,8 +81,9 @@ namespace DestinyGhostAssistant.Views
                         // MainWindowTitle can throw if process exited or access denied, though GetProcesses might only get accessible ones.
                         // The initial check for IsNullOrWhiteSpace(proc.MainWindowTitle) already handles most cases.
                         string mainWindowTitle = proc.MainWindowTitle; // Already checked, should be safe.
+                        IntPtr mainWindowHandle = proc.MainWindowHandle; // Get the handle
 
-                        tempProcessList.Add(new ProcessInfo(proc.Id, proc.ProcessName, mainWindowTitle));
+                        tempProcessList.Add(new ProcessInfo(proc.Id, proc.ProcessName, mainWindowTitle, mainWindowHandle));
                     }
                     catch (InvalidOperationException ex)
                     {
