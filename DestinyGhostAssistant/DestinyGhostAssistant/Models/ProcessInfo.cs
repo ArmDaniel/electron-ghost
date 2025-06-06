@@ -1,4 +1,5 @@
 using System; // For String.IsNullOrWhiteSpace
+using System.Text.Json.Serialization; // For JsonIgnore
 
 namespace DestinyGhostAssistant.Models
 {
@@ -7,6 +8,7 @@ namespace DestinyGhostAssistant.Models
         public int Id { get; }
         public string ProcessName { get; }
         public string MainWindowTitle { get; }
+        [JsonIgnore]
         public IntPtr MainWindowHandle { get; } // Added property
         public string DisplayName { get; }
 

@@ -135,6 +135,17 @@ namespace DestinyGhostAssistant.ViewModels
                 systemPromptBuilder.AppendLine("  }");
                 systemPromptBuilder.AppendLine("}");
                 systemPromptBuilder.AppendLine();
+                systemPromptBuilder.AppendLine("Tool Usage Guidelines:");
+                systemPromptBuilder.AppendLine("- When the user asks to 'search for', 'look up', or 'find information about' something that is not a complete URL (e.g., 'latest Destiny news', 'how to bake a cake'), use the `search_web` tool with the phrase as the 'query' parameter.");
+                systemPromptBuilder.AppendLine("  For example, if the user says \"search for the weather in London\", you should respond ONLY with the following JSON:");
+                systemPromptBuilder.AppendLine("  {");
+                systemPromptBuilder.AppendLine("    \"tool_name\": \"search_web\",");
+                systemPromptBuilder.AppendLine("    \"parameters\": {");
+                systemPromptBuilder.AppendLine("      \"query\": \"the weather in London\"");
+                systemPromptBuilder.AppendLine("    }");
+                systemPromptBuilder.AppendLine("  }");
+                systemPromptBuilder.AppendLine("- If the user provides a full and valid URL (e.g., 'https://www.bungie.net', 'http://example.com') and asks to open it, use the `open_url_in_browser` tool with the 'url' parameter.");
+                systemPromptBuilder.AppendLine();
                 systemPromptBuilder.AppendLine("Available tools:");
 
                 var availableTools = _toolExecutorService.GetAvailableTools();
@@ -488,13 +499,14 @@ namespace DestinyGhostAssistant.ViewModels
 
             try
             {
-                string modelToUse = _appSettings.SelectedOpenRouterModel ?? "gryphe/mythomax-l2-13b";
+                string modelToUse = _appSettings.SelectedOpenRouterModel ?? "gnousresearch/deephermes-3-mistral-24b-preview:free";
                 string assistantResponseText = await _openRouterService.GetChatCompletionAsync(new List<OpenRouterMessage>(_conversationHistory), modelToUse);
 
                 // Remove "Thinking..." message BEFORE adding the actual response or processing tools
                 RemoveChatMessageObject(_thinkingMessage);
                 _thinkingMessage = null;
 
+                System.Diagnostics.Debug.WriteLine($"[MainViewModel] LLM Raw Output: {assistantResponseText}"); // ADDED FOR DEBUGGING
                 ToolCallRequest? potentialToolCall = _toolExecutorService.TryParseToolCall(assistantResponseText);
                 string processingResult = await _toolExecutorService.ProcessAssistantResponseForToolsAsync(assistantResponseText);
 

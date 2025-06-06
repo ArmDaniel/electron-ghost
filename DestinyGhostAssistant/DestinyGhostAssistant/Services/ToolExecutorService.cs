@@ -56,27 +56,45 @@ namespace DestinyGhostAssistant.Services
             if (string.IsNullOrWhiteSpace(aiResponseContent))
                 return null;
 
+            string jsonToParse = aiResponseContent.Trim();
+
+            // Check if it's wrapped in markdown ```json ... ```
+            if (jsonToParse.StartsWith("```json", StringComparison.OrdinalIgnoreCase) && jsonToParse.EndsWith("```"))
+            {
+                jsonToParse = jsonToParse.Substring("```json".Length, jsonToParse.Length - "```json".Length - "```".Length).Trim();
+            }
+            // Or just ``` ... ```
+            else if (jsonToParse.StartsWith("```") && jsonToParse.EndsWith("```"))
+            {
+                jsonToParse = jsonToParse.Substring("```".Length, jsonToParse.Length - "```".Length - "```".Length).Trim();
+            }
+            
+            // If after stripping markdown, the string is empty, it's not valid JSON.
+            if (string.IsNullOrWhiteSpace(jsonToParse))
+            {
+                System.Diagnostics.Debug.WriteLine($"TryParseToolCall: Content was all markdown or empty after trim. Original: '{aiResponseContent.Substring(0, Math.Min(aiResponseContent.Length,100))}'");
+                return null;
+            }
+
             try
             {
-                // Attempt to deserialize the entire content or a specific part if tools are embedded
-                // For now, assume the entire content is a JSON object for a tool call
-                var toolCallRequest = JsonSerializer.Deserialize<ToolCallRequest>(aiResponseContent, _jsonSerializerOptions);
+                var toolCallRequest = JsonSerializer.Deserialize<ToolCallRequest>(jsonToParse, _jsonSerializerOptions);
 
-                if (toolCallRequest != null && !string.IsNullOrWhiteSpace(toolCallRequest.ToolName))
+                if (toolCallRequest != null && !string.IsNullOrWhiteSpace(toolCallRequest.ToolName) && toolCallRequest.Parameters != null)
                 {
                     return toolCallRequest;
                 }
+                System.Diagnostics.Debug.WriteLine($"TryParseToolCall: Deserialized but ToolName is null/whitespace or Parameters is null. ToolName: '{toolCallRequest?.ToolName}', Parameters Null: {toolCallRequest?.Parameters == null}. JSON attempted: {jsonToParse.Substring(0, Math.Min(jsonToParse.Length, 100))}");
                 return null;
             }
             catch (JsonException ex)
             {
-                // Not a valid JSON for a tool call, or structure mismatch. This is expected for normal chat messages.
-                System.Diagnostics.Debug.WriteLine($"JSON parsing for tool call failed (this is okay for non-tool messages): {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"JSON parsing for tool call failed. Attempted to parse: '{jsonToParse.Substring(0, Math.Min(jsonToParse.Length,100))}'. Error: {ex.Message}. Original content: '{aiResponseContent.Substring(0, Math.Min(aiResponseContent.Length,100))}'");
                 return null;
             }
             catch (Exception ex) // Catch other potential errors during parsing
             {
-                System.Diagnostics.Debug.WriteLine($"Unexpected error trying to parse tool call: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Unexpected error trying to parse tool call from: '{jsonToParse.Substring(0, Math.Min(jsonToParse.Length,100))}'. Error: {ex.Message}");
                 return null;
             }
         }

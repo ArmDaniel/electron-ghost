@@ -35,7 +35,11 @@ namespace DestinyGhostAssistant.Services.Tools
             try
             {
                 Debug.WriteLine($"SearchWebTool: Attempting to open search URL: {searchUrl}");
-                Process.Start(new ProcessStartInfo(searchUrl) { UseShellExecute = true });
+                Process.Start(new ProcessStartInfo(searchUrl) 
+                { 
+                    UseShellExecute = true,
+                    Verb = "open" // Explicitly set the verb
+                });
 
                 await Task.CompletedTask; // Conforms to async ITool, actual operation is fire-and-forget.
 

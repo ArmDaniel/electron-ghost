@@ -34,8 +34,8 @@ namespace DestinyGhostAssistant.Views
             LoadProcesses();
 
             OkButton.IsEnabled = false; // Initially disable OK button
-            OkButton.Click += OkButton_Click;
-            CancelButton.Click += CancelButton_Click;
+            // OkButton.Click += OkButton_Click;
+            // CancelButton.Click += CancelButton_Click;
             // ProcessListBox.SelectionChanged event is wired in XAML, handler is below
 
             Loaded += (sender, e) => ProcessListBox.Focus();
@@ -103,7 +103,7 @@ namespace DestinyGhostAssistant.Views
             catch (Exception ex) // Catch error during GetProcesses() itself
             {
                 Debug.WriteLine($"Error getting system processes: {ex.Message}");
-                MessageBox.Show(this, $"Error loading process list: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Error loading process list: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
 
             // Sort and populate the ObservableCollection

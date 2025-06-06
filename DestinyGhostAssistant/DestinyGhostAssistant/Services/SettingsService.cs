@@ -135,7 +135,7 @@ namespace DestinyGhostAssistant.Services
         {
             return new AppSettings
             {
-                SelectedOpenRouterModel = "gryphe/mythomax-l2-13b",
+                SelectedOpenRouterModel = "nousresearch/deephermes-3-mistral-24b-preview:free",
                 CustomSystemPrompt = null // MainViewModel will use its dynamic prompt if this is null
             };
         }

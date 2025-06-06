@@ -17,7 +17,7 @@ namespace DestinyGhostAssistant.Views
         // Predefined list of common OpenRouter models
         private readonly List<string> _predefinedModels = new List<string>
         {
-            "gryphe/mythomax-l2-13b",
+            "nousresearch/deephermes-3-mistral-24b-preview:free",
             "google/gemma-7b-it",
             "mistralai/mistral-7b-instruct",
             "meta-llama/llama-2-13b-chat",
