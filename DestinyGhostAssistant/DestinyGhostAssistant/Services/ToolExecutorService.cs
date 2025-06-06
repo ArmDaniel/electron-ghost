@@ -35,6 +35,15 @@ namespace DestinyGhostAssistant.Services
 
             var readFileContentTool = new ReadFileContentTool();
             _tools.Add(readFileContentTool.Name, readFileContentTool);
+
+            var openUrlTool = new OpenUrlTool();
+            _tools.Add(openUrlTool.Name, openUrlTool);
+
+            var searchWebTool = new SearchWebTool();
+            _tools.Add(searchWebTool.Name, searchWebTool);
+
+            var getBrowserContextTool = new GetBrowserContextTool();
+            _tools.Add(getBrowserContextTool.Name, getBrowserContextTool);
         }
 
         public List<ITool> GetAvailableTools()
@@ -113,6 +122,24 @@ namespace DestinyGhostAssistant.Services
                 if (_tools.TryGetValue(toolCallRequest.ToolName, out ITool? tool))
                 {
                     System.Diagnostics.Debug.WriteLine($"[ToolExecutorService] Found tool '{tool.Name}' in registered tools.");
+
+                    // Special handling for get_browser_context to inject AttachedProcess
+                    if (tool.Name == "get_browser_context")
+                    {
+                        if (_mainViewModel.AttachedProcess != null)
+                        {
+                            toolCallRequest.Parameters["_attachedProcess"] = _mainViewModel.AttachedProcess;
+                            System.Diagnostics.Debug.WriteLine($"[ToolExecutorService] Injected AttachedProcess (PID: {_mainViewModel.AttachedProcess.Id}) into parameters for {tool.Name}.");
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[ToolExecutorService] {tool.Name} called but no process attached in MainViewModel.");
+                            // The tool itself will return an error if _attachedProcess is missing,
+                            // or we could short-circuit here. Let tool handle it for now.
+                            // return $"Error: {tool.Name} requires an attached process, but none is attached.";
+                        }
+                    }
+
                     bool confirmed = true; // Default to true if no confirmation needed
                     if (NeedsConfirmation(tool.Name))
                     {
