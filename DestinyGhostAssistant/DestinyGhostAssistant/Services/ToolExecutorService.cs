@@ -35,6 +35,12 @@ namespace DestinyGhostAssistant.Services
 
             var readFileContentTool = new ReadFileContentTool();
             _tools.Add(readFileContentTool.Name, readFileContentTool);
+
+            var openUrlTool = new OpenUrlTool();
+            _tools.Add(openUrlTool.Name, openUrlTool);
+
+            var searchWebTool = new SearchWebTool();
+            _tools.Add(searchWebTool.Name, searchWebTool);
         }
 
         public List<ITool> GetAvailableTools()
