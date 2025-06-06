@@ -35,6 +35,8 @@
                 <MenuItem Header="_Save Chat..." Command="{Binding SaveChatCommand}" />
                 <MenuItem Header="_Load Chat..." Command="{Binding LoadChatCommand}" />
                 <Separator />
+                <MenuItem Header="Attach to Process..." Command="{Binding AttachToProcessCommand}" />
+                <Separator />
                 <MenuItem Header="_Settings..." Command="{Binding OpenSettingsCommand}" />
                 <Separator />
                 <MenuItem Header="E_xit" x:Name="MenuExit" Click="MenuExit_Click" />
@@ -46,6 +48,9 @@
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="10" Background="#FFF0F0F0">
             <Image Source="/Assets/GhostLogo.png" Width="40" Height="40" Margin="0,0,10,0" VerticalAlignment="Center"/>
             <TextBlock Text="Ghost Assistant" FontSize="20" VerticalAlignment="Center"/>
+            <!-- New TextBlock for attached process status -->
+            <TextBlock Text="{Binding AttachedProcessDisplay}"
+                       FontSize="12" VerticalAlignment="Center" Margin="20,0,0,0" Opacity="0.7"/>
         </StackPanel>
 
         <!-- Chat History Area -->

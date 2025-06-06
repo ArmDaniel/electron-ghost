@@ -3,7 +3,6 @@ using System.Windows;
 using System.Windows.Controls; // Required for ScrollViewer
 using System.Windows.Input; // Required for KeyEventArgs
 using DestinyGhostAssistant.ViewModels; // Required for MainViewModel
-using System.Windows.Media;
 
 namespace DestinyGhostAssistant
 {

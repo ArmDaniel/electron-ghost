@@ -25,7 +25,8 @@ namespace DestinyGhostAssistant.ViewModels
         public ICommand SaveChatCommand { get; }
         public ICommand LoadChatCommand { get; }
         public ICommand OpenSettingsCommand { get; }
-        public ICommand CopyToClipboardCommand { get; } // Added command
+        public ICommand CopyToClipboardCommand { get; }
+        public ICommand AttachToProcessCommand { get; } // Added command
 
         public event EventHandler? RequestFocusOnInput;
 
@@ -42,6 +43,7 @@ namespace DestinyGhostAssistant.ViewModels
                     if (LoadChatCommand is RelayCommand loadCmd) loadCmd.RaiseCanExecuteChanged();
                     if (NewChatCommand is RelayCommand newCmd) newCmd.RaiseCanExecuteChanged();
                     if (OpenSettingsCommand is RelayCommand openSetCmd) openSetCmd.RaiseCanExecuteChanged();
+                    if (AttachToProcessCommand is RelayCommand attachCmd) attachCmd.RaiseCanExecuteChanged(); // Update CanExecute
 
                     if (!value) // If IsSendingMessage is being set to false
                     {
@@ -56,10 +58,24 @@ namespace DestinyGhostAssistant.ViewModels
         private readonly ChatHistoryService _chatHistoryService;
         private readonly SettingsService _settingsService;
         private AppSettings _appSettings;
+        private ProcessInfo? _attachedProcess; // Added field
+        public ProcessInfo? AttachedProcess
+        {
+            get => _attachedProcess;
+            private set
+            {
+                if (SetProperty(ref _attachedProcess, value))
+                {
+                    OnPropertyChanged(nameof(AttachedProcessDisplay));
+                }
+            }
+        }
+        public string AttachedProcessDisplay => AttachedProcess != null ? $"Attached to: {AttachedProcess.ProcessName} (PID: {AttachedProcess.Id})" : "Attached to: None";
+
         private readonly List<OpenRouterMessage> _conversationHistory;
         private const int MaxHistoryMessages = 20;
         private string _systemPromptString;
-        private ChatMessage? _thinkingMessage; // Field for the "Thinking..." message instance
+        private ChatMessage? _thinkingMessage;
 
         public MainViewModel()
         {
@@ -80,7 +96,8 @@ namespace DestinyGhostAssistant.ViewModels
             SaveChatCommand = new RelayCommand(async () => await SaveChatAsync(), () => Messages.Any() && !IsSendingMessage);
             LoadChatCommand = new RelayCommand(async () => await LoadChatListAndPromptAsync(), () => !IsSendingMessage);
             OpenSettingsCommand = new RelayCommand(OpenSettingsWindow, () => !IsSendingMessage);
-            CopyToClipboardCommand = new RelayCommand<string?>(CopyTextToClipboard, CanCopyTextToClipboard); // Initialize command
+            CopyToClipboardCommand = new RelayCommand<string?>(CopyTextToClipboard, CanCopyTextToClipboard);
+            AttachToProcessCommand = new RelayCommand(ShowAttachToProcessDialog, () => !IsSendingMessage); // Initialize command
 
             Messages.CollectionChanged += (s, e) =>
             {
@@ -155,6 +172,48 @@ namespace DestinyGhostAssistant.ViewModels
                 AddSystemMessage("Settings saved. System prompt changes will apply to new chats. Model changes apply immediately to next request.");
             }
             IsSendingMessage = false;
+        }
+
+        private void ShowAttachToProcessDialog()
+        {
+            IsSendingMessage = true; // Indicate busy state, disable other commands
+            try
+            {
+                var attachDialog = new DestinyGhostAssistant.Views.AttachToProcessDialog();
+                if (Application.Current.MainWindow != null && Application.Current.MainWindow.IsVisible)
+                {
+                    attachDialog.Owner = Application.Current.MainWindow;
+                }
+
+                bool? dialogResult = attachDialog.ShowDialog();
+
+                if (dialogResult == true && attachDialog.SelectedProcess != null)
+                {
+                    AttachedProcess = attachDialog.SelectedProcess;
+                    AddSystemMessage($"Successfully attached to process: {AttachedProcess.DisplayName}");
+                }
+                else
+                {
+                    // User cancelled or no process selected.
+                    // If already attached, mention it. Otherwise, just note cancellation.
+                    if (AttachedProcess != null)
+                    {
+                        AddSystemMessage($"Attach to process cancelled. Still attached to: {AttachedProcess.DisplayName}");
+                    } else {
+                        AddSystemMessage("Attach to process cancelled or no process selected.");
+                    }
+                    // Optionally, to detach on cancel: AttachedProcess = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                AddSystemMessage($"Error opening attach to process dialog: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"ShowAttachToProcessDialog Exception: {ex}");
+            }
+            finally
+            {
+                IsSendingMessage = false;
+            }
         }
 
         private async Task SaveChatAsync()
@@ -429,7 +488,7 @@ namespace DestinyGhostAssistant.ViewModels
 
             try
             {
-                string modelToUse = _appSettings.SelectedOpenRouterModel ?? "nousresearch/deephermes-3-mistral-24b-preview:free";
+                string modelToUse = _appSettings.SelectedOpenRouterModel ?? "gryphe/mythomax-l2-13b";
                 string assistantResponseText = await _openRouterService.GetChatCompletionAsync(new List<OpenRouterMessage>(_conversationHistory), modelToUse);
 
                 // Remove "Thinking..." message BEFORE adding the actual response or processing tools
