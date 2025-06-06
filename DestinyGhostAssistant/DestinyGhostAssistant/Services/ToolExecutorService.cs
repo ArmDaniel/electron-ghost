@@ -44,6 +44,9 @@ namespace DestinyGhostAssistant.Services
 
             var getBrowserContextTool = new GetBrowserContextTool();
             _tools.Add(getBrowserContextTool.Name, getBrowserContextTool);
+
+            var getVSActiveDocTool = new GetVisualStudioActiveDocumentTool();
+            _tools.Add(getVSActiveDocTool.Name, getVSActiveDocTool);
         }
 
         public List<ITool> GetAvailableTools()
@@ -123,8 +126,8 @@ namespace DestinyGhostAssistant.Services
                 {
                     System.Diagnostics.Debug.WriteLine($"[ToolExecutorService] Found tool '{tool.Name}' in registered tools.");
 
-                    // Special handling for get_browser_context to inject AttachedProcess
-                    if (tool.Name == "get_browser_context")
+                    // Special handling for tools requiring AttachedProcess
+                    if (tool.Name == "get_browser_context" || tool.Name == "get_visual_studio_active_document")
                     {
                         if (_mainViewModel.AttachedProcess != null)
                         {
@@ -133,10 +136,9 @@ namespace DestinyGhostAssistant.Services
                         }
                         else
                         {
-                            System.Diagnostics.Debug.WriteLine($"[ToolExecutorService] {tool.Name} called but no process attached in MainViewModel.");
-                            // The tool itself will return an error if _attachedProcess is missing,
-                            // or we could short-circuit here. Let tool handle it for now.
-                            // return $"Error: {tool.Name} requires an attached process, but none is attached.";
+                            System.Diagnostics.Debug.WriteLine($"[ToolExecutorService] Tool '{tool.Name}' called but no process attached in MainViewModel.");
+                            // The tool itself is designed to return an error if _attachedProcess parameter is missing or unsuitable.
+                            // Allow the tool to execute and return its specific error message.
                         }
                     }
 

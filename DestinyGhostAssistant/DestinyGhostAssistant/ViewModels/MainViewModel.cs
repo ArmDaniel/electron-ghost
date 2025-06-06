@@ -26,7 +26,7 @@ namespace DestinyGhostAssistant.ViewModels
         public ICommand LoadChatCommand { get; }
         public ICommand OpenSettingsCommand { get; }
         public ICommand CopyToClipboardCommand { get; }
-        public ICommand AttachToProcessCommand { get; } // Added command
+        public ICommand AttachToProcessCommand { get; }
 
         public event EventHandler? RequestFocusOnInput;
 
@@ -34,7 +34,7 @@ namespace DestinyGhostAssistant.ViewModels
         public bool IsSendingMessage
         {
             get => _isSendingMessage;
-            private set
+            internal set // Changed to internal for testability
             {
                 if (SetProperty(ref _isSendingMessage, value))
                 {
@@ -331,19 +331,28 @@ namespace DestinyGhostAssistant.ViewModels
         private void AddMessage(string text, MessageSender sender, DateTime? timestamp = null)
         {
             var chatMessage = new ChatMessage(text, sender, timestamp);
-            Application.Current.Dispatcher.Invoke(() =>
+            // Conditional dispatcher invocation for testability
+            if (Application.Current != null)
             {
-                Messages.Add(chatMessage);
-            });
+                Application.Current.Dispatcher.Invoke(() => Messages.Add(chatMessage));
+            }
+            else
+            {
+                Messages.Add(chatMessage); // Allow direct add in test environment
+            }
         }
 
         // Helper to add the exact ChatMessage object instance to the UI
         private void AddChatMessageObject(ChatMessage message)
         {
-            Application.Current.Dispatcher.Invoke(() =>
+            if (Application.Current != null)
+            {
+                Application.Current.Dispatcher.Invoke(() => Messages.Add(message));
+            }
+            else
             {
                 Messages.Add(message);
-            });
+            }
         }
 
         // Helper to remove the exact ChatMessage object instance from the UI
@@ -351,15 +360,27 @@ namespace DestinyGhostAssistant.ViewModels
         {
             if (message != null)
             {
-                Application.Current.Dispatcher.Invoke(() =>
+                if (Application.Current != null)
                 {
-                    if (Messages.Contains(message)) // Check if it's still there before removing
+                    Application.Current.Dispatcher.Invoke(() =>
                     {
-                        Messages.Remove(message);
-                    }
-                });
+                        if (Messages.Contains(message))
+                        {
+                            Messages.Remove(message);
+                        }
+                    });
+                }
+                else
+                {
+                     if (Messages.Contains(message)) Messages.Remove(message);
+                }
             }
         }
+
+        // Internal getter for testing conversation history
+        internal List<OpenRouterMessage> GetConversationHistoryForTest() => new List<OpenRouterMessage>(_conversationHistory);
+        // Internal method for testing PopulateChat
+        internal void PopulateChatForTest(IEnumerable<ChatMessage> messagesToLoad, string loadedChatName) => PopulateChat(messagesToLoad, loadedChatName);
 
 
         public void AddSystemMessage(string message)
@@ -391,7 +412,8 @@ namespace DestinyGhostAssistant.ViewModels
             AddMessage("Welcome, Guardian! Ghost at your service. How can I assist you today?", MessageSender.Assistant);
         }
 
-        private void PopulateChat(IEnumerable<ChatMessage> messagesToLoad, string loadedChatName)
+        // Made internal for testing purposes
+        internal void PopulateChat(IEnumerable<ChatMessage> messagesToLoad, string loadedChatName)
         {
             System.Diagnostics.Debug.WriteLine($"[MainViewModel] PopulateChat: Loading chat '{loadedChatName}'. Message count to load: {messagesToLoad.Count()}");
             Messages.Clear();
