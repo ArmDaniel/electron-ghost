@@ -25,6 +25,7 @@
     <Window.Resources>
         <utils:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
         <utils:AssistantMessageVisibilityConverter x:Key="AssistantMessageVisibilityConverter"/>
+        <utils:MarkdownToFlowDocumentConverter x:Key="MarkdownToFlowDocumentConverter"/>
 
         <!-- Modern Dark Theme Colors -->
         <SolidColorBrush x:Key="BackgroundBrush" Color="#0A0A0A"/>
@@ -238,13 +239,22 @@
                                                Foreground="{StaticResource TextSecondaryBrush}"
                                                Margin="0,0,0,4"/>
 
-                                    <TextBlock Grid.Row="1"
-                                               Text="{Binding Text}"
-                                               TextWrapping="Wrap"
-                                               FontSize="13"
-                                               Foreground="{StaticResource TextPrimaryBrush}"
-                                               Margin="0,0,0,6"
-                                               LineHeight="20"/>
+                                    <RichTextBox Grid.Row="1"
+                                                 Document="{Binding Text, Converter={StaticResource MarkdownToFlowDocumentConverter}}"
+                                                 IsReadOnly="True"
+                                                 BorderThickness="0"
+                                                 Background="Transparent"
+                                                 Foreground="{StaticResource TextPrimaryBrush}"
+                                                 Margin="0,0,0,6"
+                                                 IsDocumentEnabled="True"
+                                                 FontSize="13">
+                                        <RichTextBox.Resources>
+                                            <Style TargetType="{x:Type Paragraph}">
+                                                <Setter Property="Margin" Value="0"/>
+                                                <Setter Property="LineHeight" Value="20"/>
+                                            </Style>
+                                        </RichTextBox.Resources>
+                                    </RichTextBox>
 
                                     <Grid Grid.Row="2">
                                         <Grid.ColumnDefinitions>

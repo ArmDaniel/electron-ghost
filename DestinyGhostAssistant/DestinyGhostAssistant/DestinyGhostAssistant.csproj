@@ -13,4 +13,8 @@
     <Resource Include="Assets/GhostLogo.png" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Markdig.Wpf" Version="0.7.0" />
+  </ItemGroup>
+
 </Project>
