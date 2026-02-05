@@ -8,7 +8,15 @@
         xmlns:models="clr-namespace:DestinyGhostAssistant.Models"
         xmlns:utils="clr-namespace:DestinyGhostAssistant.Utils"
         mc:Ignorable="d"
-        Title="Destiny Ghost Assistant" Height="600" Width="400">
+        Title="Ghost Agent"
+        Height="700"
+        Width="380"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ResizeMode="CanResizeWithGrip"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
 
     <Window.DataContext>
         <vm:MainViewModel/>
@@ -17,95 +25,308 @@
     <Window.Resources>
         <utils:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
         <utils:AssistantMessageVisibilityConverter x:Key="AssistantMessageVisibilityConverter"/>
+        <utils:MarkdownToFlowDocumentConverter x:Key="MarkdownToFlowDocumentConverter"/>
+
+        <!-- Modern Dark Theme Colors -->
+        <SolidColorBrush x:Key="BackgroundBrush" Color="#0A0A0A"/>
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#18181B"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#27272A"/>
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FAFAFA"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#A1A1AA"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#3B82F6"/>
+        <SolidColorBrush x:Key="AccentHoverBrush" Color="#2563EB"/>
+        <SolidColorBrush x:Key="UserMessageBrush" Color="#1E293B"/>
+        <SolidColorBrush x:Key="AssistantMessageBrush" Color="#27272A"/>
+        <SolidColorBrush x:Key="SystemMessageBrush" Color="#18181B"/>
+
+        <!-- Button Style -->
+        <Style x:Key="ModernButton" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{StaticResource AccentHoverBrush}"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.5"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Icon Button Style -->
+        <Style x:Key="IconButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+                    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- TextBox Style -->
+        <Style x:Key="ModernTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="CaretBrush" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                        VerticalScrollBarVisibility="Auto"
+                                        Focusable="False"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/> <!-- New: For Menu -->
-            <RowDefinition Height="Auto"/> <!-- For Logo/Header -->
-            <RowDefinition Height="*"/>    <!-- For Chat History -->
-            <RowDefinition Height="Auto"/> <!-- For Input Area -->
-        </Grid.RowDefinitions>
+    <!-- Main Container with Drop Shadow -->
+    <Border Background="{StaticResource BackgroundBrush}"
+            CornerRadius="12"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect Color="Black" Direction="270" ShadowDepth="4" BlurRadius="20" Opacity="0.6"/>
+        </Border.Effect>
 
-        <!-- Menu Area -->
-        <Menu Grid.Row="0">
-            <MenuItem Header="_File">
-                <MenuItem Header="_New Chat" Command="{Binding NewChatCommand}" />
-                <Separator />
-                <MenuItem Header="_Save Chat..." Command="{Binding SaveChatCommand}" />
-                <MenuItem Header="_Load Chat..." Command="{Binding LoadChatCommand}" />
-                <Separator />
-                <MenuItem Header="_Settings..." Command="{Binding OpenSettingsCommand}" />
-                <Separator />
-                <MenuItem Header="E_xit" x:Name="MenuExit" Click="MenuExit_Click" />
-            </MenuItem>
-            <!-- Add other top-level menus like "_Edit", "_View", "_Help" if desired -->
-        </Menu>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Title Bar -->
+                <RowDefinition Height="*"/>    <!-- Chat History -->
+                <RowDefinition Height="Auto"/> <!-- Input Area -->
+            </Grid.RowDefinitions>
 
-        <!-- Logo Area -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="10" Background="#FFF0F0F0">
-            <Image Source="/Assets/GhostLogo.png" Width="40" Height="40" Margin="0,0,10,0" VerticalAlignment="Center"/>
-            <TextBlock Text="Ghost Assistant" FontSize="20" VerticalAlignment="Center"/>
-        </StackPanel>
+            <!-- Title Bar with Drag Handle -->
+            <Border Grid.Row="0"
+                    Background="{StaticResource SurfaceBrush}"
+                    CornerRadius="12,12,0,0"
+                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid Margin="16,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-        <!-- Chat History Area -->
-        <ScrollViewer Grid.Row="2" x:Name="ChatScrollViewer" VerticalScrollBarVisibility="Auto" Margin="10,0,10,0" Padding="0,5">
-            <ItemsControl ItemsSource="{Binding Messages}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="{x:Type models:ChatMessage}">
-                        <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="5" Padding="8" Margin="0,5">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" /> <!-- Sender -->
-                                    <RowDefinition Height="Auto" /> <!-- Message Text -->
-                                    <RowDefinition Height="Auto" /> <!-- Timestamp and Copy Button row -->
-                                </Grid.RowDefinitions>
+                    <!-- Logo and Title -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <Image Source="/Assets/GhostLogo.png" Width="24" Height="24" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Ghost Agent"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
 
-                                <TextBlock Grid.Row="0" FontWeight="Bold" Text="{Binding SenderDisplay}" Margin="0,0,0,2"/>
+                    <!-- Action Buttons -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                        <Button Content="⚙"
+                                Style="{StaticResource IconButton}"
+                                Command="{Binding OpenSettingsCommand}"
+                                ToolTip="Settings"
+                                FontSize="14"
+                                Width="28" Height="28"/>
+                        <Button Content="💾"
+                                Style="{StaticResource IconButton}"
+                                Command="{Binding SaveChatCommand}"
+                                ToolTip="Save Chat"
+                                FontSize="12"
+                                Width="28" Height="28"/>
+                        <Button Content="📂"
+                                Style="{StaticResource IconButton}"
+                                Command="{Binding LoadChatCommand}"
+                                ToolTip="Load Chat"
+                                FontSize="12"
+                                Width="28" Height="28"/>
+                        <Button Content="+"
+                                Style="{StaticResource IconButton}"
+                                Command="{Binding NewChatCommand}"
+                                ToolTip="New Chat"
+                                FontSize="16"
+                                FontWeight="Bold"
+                                Width="28" Height="28"/>
+                        <Button Content="×"
+                                Style="{StaticResource IconButton}"
+                                Click="MenuExit_Click"
+                                ToolTip="Close"
+                                FontSize="20"
+                                FontWeight="Bold"
+                                Width="28" Height="28"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
 
-                                <TextBlock Grid.Row="1" Text="{Binding Text}" TextWrapping="Wrap" Margin="0,2,0,5" />
+            <!-- Chat History Area -->
+            <ScrollViewer Grid.Row="1"
+                          x:Name="ChatScrollViewer"
+                          VerticalScrollBarVisibility="Auto"
+                          Margin="12,8"
+                          Padding="4">
+                <ItemsControl ItemsSource="{Binding Messages}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type models:ChatMessage}">
+                            <Border Padding="12,8"
+                                    Margin="0,6"
+                                    CornerRadius="8">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Sender}" Value="User">
+                                                <Setter Property="Background" Value="{StaticResource UserMessageBrush}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Sender}" Value="Assistant">
+                                                <Setter Property="Background" Value="{StaticResource AssistantMessageBrush}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Sender}" Value="System">
+                                                <Setter Property="Background" Value="{StaticResource SystemMessageBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
 
-                                <Grid Grid.Row="2">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" /> <!-- Timestamp will take available space -->
-                                        <ColumnDefinition Width="Auto" /> <!-- Copy Button will size to content -->
-                                    </Grid.ColumnDefinitions>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
 
-                                    <TextBlock Grid.Column="0" Text="{Binding Timestamp, StringFormat='hh:mm tt'}"
-                                               FontSize="10" Opacity="0.7" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
+                                    <TextBlock Grid.Row="0"
+                                               FontWeight="SemiBold"
+                                               FontSize="11"
+                                               Text="{Binding SenderDisplay}"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               Margin="0,0,0,4"/>
 
-                                    <Button Grid.Column="1" Content="Copy" FontSize="10" Padding="5,2" Margin="5,0,0,0"
-                                            VerticalAlignment="Bottom" HorizontalAlignment="Right"
-                                            Command="{Binding DataContext.CopyToClipboardCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
-                                            CommandParameter="{Binding Text}"
-                                            Visibility="{Binding Sender, Converter={StaticResource AssistantMessageVisibilityConverter}}" />
+                                    <RichTextBox Grid.Row="1"
+                                                 Document="{Binding Text, Converter={StaticResource MarkdownToFlowDocumentConverter}}"
+                                                 IsReadOnly="True"
+                                                 BorderThickness="0"
+                                                 Background="Transparent"
+                                                 Foreground="{StaticResource TextPrimaryBrush}"
+                                                 Margin="0,0,0,6"
+                                                 IsDocumentEnabled="True"
+                                                 FontSize="13">
+                                        <RichTextBox.Resources>
+                                            <Style TargetType="{x:Type Paragraph}">
+                                                <Setter Property="Margin" Value="0"/>
+                                                <Setter Property="LineHeight" Value="20"/>
+                                            </Style>
+                                        </RichTextBox.Resources>
+                                    </RichTextBox>
+
+                                    <Grid Grid.Row="2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding Timestamp, StringFormat='hh:mm tt'}"
+                                                   FontSize="10"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   Opacity="0.6"
+                                                   HorizontalAlignment="Right"
+                                                   VerticalAlignment="Bottom" />
+
+                                        <Button Grid.Column="1"
+                                                Content="📋"
+                                                FontSize="11"
+                                                Style="{StaticResource IconButton}"
+                                                Padding="6,2"
+                                                Margin="8,0,0,0"
+                                                VerticalAlignment="Bottom"
+                                                HorizontalAlignment="Right"
+                                                Command="{Binding DataContext.CopyToClipboardCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                                CommandParameter="{Binding Text}"
+                                                ToolTip="Copy"
+                                                Visibility="{Binding Sender, Converter={StaticResource AssistantMessageVisibilityConverter}}" />
+                                    </Grid>
                                 </Grid>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
 
-        <!-- Input Area -->
-        <Border Grid.Row="3" BorderThickness="0,1,0,0" BorderBrush="LightGray" Padding="10">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBox Grid.Column="0" x:Name="MessageInputTextBox" Margin="0,0,10,0" FontSize="14" VerticalContentAlignment="Center"
-                         Text="{Binding CurrentMessage, UpdateSourceTrigger=PropertyChanged}"
-                         IsEnabled="{Binding Path=IsSendingMessage, Converter={StaticResource InverseBooleanConverter}}"
-                         KeyDown="MessageInputTextBox_KeyDown">
-                    <TextBox.InputBindings>
-                        <KeyBinding Command="{Binding SendMessageCommand}" Key="Enter"/>
-                    </TextBox.InputBindings>
-                </TextBox>
-                <Button Grid.Column="1" Content="Send" Padding="15,8"
-                        Command="{Binding SendMessageCommand}"
-                        IsEnabled="{Binding Path=IsSendingMessage, Converter={StaticResource InverseBooleanConverter}}"/>
-            </Grid>
-        </Border>
-    </Grid>
+            <!-- Input Area -->
+            <Border Grid.Row="2"
+                    Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="0,1,0,0"
+                    CornerRadius="0,0,12,12"
+                    Padding="12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox Grid.Column="0"
+                             x:Name="MessageInputTextBox"
+                             Style="{StaticResource ModernTextBox}"
+                             Margin="0,0,8,0"
+                             Text="{Binding CurrentMessage, UpdateSourceTrigger=PropertyChanged}"
+                             IsEnabled="{Binding Path=IsSendingMessage, Converter={StaticResource InverseBooleanConverter}}"
+                             KeyDown="MessageInputTextBox_KeyDown"
+                             TextWrapping="Wrap"
+                             AcceptsReturn="False"
+                             MaxHeight="100">
+                        <TextBox.InputBindings>
+                            <KeyBinding Command="{Binding SendMessageCommand}" Key="Enter"/>
+                        </TextBox.InputBindings>
+                    </TextBox>
+
+                    <Button Grid.Column="1"
+                            Content="Send"
+                            Style="{StaticResource ModernButton}"
+                            Command="{Binding SendMessageCommand}"
+                            IsEnabled="{Binding Path=IsSendingMessage, Converter={StaticResource InverseBooleanConverter}}"
+                            Height="42"
+                            MinWidth="60"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
 </Window>

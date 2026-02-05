@@ -22,6 +22,21 @@ namespace DestinyGhostAssistant
             Loaded += MainWindow_Loaded;
         }
 
+        private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // Allow dragging the window
+            this.DragMove();
+        }
+
+        private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // Allow dragging the window from title bar
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                this.DragMove();
+            }
+        }
+
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             if (DataContext is MainViewModel viewModel)

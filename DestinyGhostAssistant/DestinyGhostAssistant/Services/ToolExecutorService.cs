@@ -35,6 +35,9 @@ namespace DestinyGhostAssistant.Services
 
             var readFileContentTool = new ReadFileContentTool();
             _tools.Add(readFileContentTool.Name, readFileContentTool);
+
+            var writeFileTool = new WriteFileTool();
+            _tools.Add(writeFileTool.Name, writeFileTool);
         }
 
         public List<ITool> GetAvailableTools()
@@ -75,7 +78,7 @@ namespace DestinyGhostAssistant.Services
         private bool NeedsConfirmation(string toolName)
         {
             // Define which tools need confirmation.
-            if (toolName == "create_file")
+            if (toolName == "create_file" || toolName == "write_file")
             {
                 return true;
             }
