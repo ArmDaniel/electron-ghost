@@ -3,6 +3,46 @@ using System.Text.Json.Serialization;
 
 namespace DestinyGhostAssistant.Models
 {
+    // --- Models list API response types ---
+
+    public class OpenRouterModelInfo
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("description")]
+        public string? Description { get; set; }
+
+        [JsonPropertyName("pricing")]
+        public OpenRouterModelPricing? Pricing { get; set; }
+
+        [JsonPropertyName("context_length")]
+        public int? ContextLength { get; set; }
+
+        /// <summary>Display string for UI: "Name (id)"</summary>
+        public string DisplayName => string.IsNullOrWhiteSpace(Name) ? Id : $"{Name}  —  {Id}";
+    }
+
+    public class OpenRouterModelPricing
+    {
+        [JsonPropertyName("prompt")]
+        public string? Prompt { get; set; }
+
+        [JsonPropertyName("completion")]
+        public string? Completion { get; set; }
+    }
+
+    public class OpenRouterModelsResponse
+    {
+        [JsonPropertyName("data")]
+        public List<OpenRouterModelInfo> Data { get; set; } = new();
+    }
+
+    // --- Chat completions types ---
+
     public class OpenRouterMessage
     {
         [JsonPropertyName("role")]

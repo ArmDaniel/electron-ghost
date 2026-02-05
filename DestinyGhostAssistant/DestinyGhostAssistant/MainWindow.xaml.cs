@@ -22,18 +22,19 @@ namespace DestinyGhostAssistant
             Loaded += MainWindow_Loaded;
         }
 
-        private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            // Allow dragging the window
-            this.DragMove();
-        }
-
         private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             // Allow dragging the window from title bar
             if (e.LeftButton == MouseButtonState.Pressed)
             {
-                this.DragMove();
+                try
+                {
+                    this.DragMove();
+                }
+                catch (InvalidOperationException)
+                {
+                    // Can occur if the mouse button is released during the call
+                }
             }
         }
 

@@ -8,6 +8,7 @@ using System.Text.Json.Serialization; // Required for JsonSerializerOptions & Js
 using System.Threading.Tasks;
 using DestinyGhostAssistant.Models; // For OpenRouterMessage etc.
 using System.Diagnostics; // Required for Debug.WriteLine
+using System.Linq; // Required for OrderBy
 
 namespace DestinyGhostAssistant.Services
 {
@@ -16,6 +17,7 @@ namespace DestinyGhostAssistant.Services
         private readonly HttpClient _httpClient;
         private readonly string _apiKey;
         private const string OpenRouterApiUrl = "https://openrouter.ai/api/v1/chat/completions";
+        private const string OpenRouterModelsUrl = "https://openrouter.ai/api/v1/models";
 
         private static readonly ProductInfoHeaderValue AppUserAgent = new ProductInfoHeaderValue("DestinyGhostAssistant", "1.0.0");
         private static readonly JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions
@@ -38,6 +40,38 @@ namespace DestinyGhostAssistant.Services
             _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "http://localhost");
             _httpClient.DefaultRequestHeaders.Add("X-Title", "Destiny Ghost Assistant");
             _httpClient.DefaultRequestHeaders.UserAgent.Add(AppUserAgent);
+        }
+
+        /// <summary>
+        /// Fetches the list of all available models from OpenRouter.
+        /// This is a static call that doesn't require an API key.
+        /// </summary>
+        public static async Task<List<OpenRouterModelInfo>> FetchAvailableModelsAsync()
+        {
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.UserAgent.Add(AppUserAgent);
+
+            try
+            {
+                var response = await client.GetAsync(OpenRouterModelsUrl);
+                response.EnsureSuccessStatusCode();
+
+                string json = await response.Content.ReadAsStringAsync();
+                var modelsResponse = JsonSerializer.Deserialize<OpenRouterModelsResponse>(json);
+
+                if (modelsResponse?.Data != null)
+                {
+                    return modelsResponse.Data
+                        .OrderBy(m => m.Name)
+                        .ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error fetching models from OpenRouter: {ex.Message}");
+            }
+
+            return new List<OpenRouterModelInfo>();
         }
 
         public async Task<string> GetChatCompletionAsync(List<OpenRouterMessage> messages, string modelName = "gryphe/mythomax-l2-13b")

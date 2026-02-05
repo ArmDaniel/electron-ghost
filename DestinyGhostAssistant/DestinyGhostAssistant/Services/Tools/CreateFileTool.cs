@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using DestinyGhostAssistant.Utils;
 
 namespace DestinyGhostAssistant.Services.Tools
 {
@@ -15,25 +16,14 @@ namespace DestinyGhostAssistant.Services.Tools
         public async Task<string> ExecuteAsync(Dictionary<string, object> parameters)
         {
             // Validate 'path' parameter
-            if (!parameters.TryGetValue("path", out object? pathObj) || !(pathObj is string filePath) || string.IsNullOrWhiteSpace(filePath))
+            string? filePath = ToolParameterHelper.GetString(parameters, "path");
+            if (string.IsNullOrWhiteSpace(filePath))
             {
                 return "Error: 'path' parameter is required and must be a non-empty string.";
             }
 
             // Validate 'content' parameter (optional, defaults to empty string)
-            string fileContent = string.Empty;
-            if (parameters.TryGetValue("content", out object? contentObj) && contentObj is string tempContent)
-            {
-                fileContent = tempContent;
-            }
-            else if (parameters.ContainsKey("content") && contentObj == null) // Key exists but value is null
-            {
-                fileContent = string.Empty; // Treat null content as empty
-            }
-            else if (parameters.ContainsKey("content") && !(contentObj is string)) // Key exists but not a string
-            {
-                 return "Error: 'content' parameter, if provided, must be a string.";
-            }
+            string fileContent = ToolParameterHelper.GetString(parameters, "content") ?? string.Empty;
 
 
             // Basic path validation (more robust validation might be needed for production)

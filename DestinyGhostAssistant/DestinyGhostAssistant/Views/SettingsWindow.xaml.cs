@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using DestinyGhostAssistant.Models;
 using DestinyGhostAssistant.Services;
-using System.Linq; // Required for Any()
 
 namespace DestinyGhostAssistant.Views
 {
@@ -13,63 +15,163 @@ namespace DestinyGhostAssistant.Views
     {
         private readonly SettingsService _settingsService;
         private AppSettings _currentSettings;
-
-        // Predefined list of common OpenRouter models
-        private readonly List<string> _predefinedModels = new List<string>
-        {
-            "nousresearch/deephermes-3-mistral-24b-preview:free",
-            "qwen/qwen3-235b-a22b:free",
-            "meta-llama/llama-4-maverick:free",
-            "mistralai/mistral-small-3.1-24b-instruct:free",
-            "deepseek/deepseek-r1-0528:free"
-        };
+        private List<OpenRouterModelInfo> _allModels = new();
+        private OpenRouterModelInfo? _selectedModel;
+        private bool _suppressSelectionEvent;
 
         public SettingsWindow()
         {
             InitializeComponent();
             _settingsService = new SettingsService();
-            LoadSettingsData();
-
-            SaveButton.Click += SaveButton_Click;
-            CancelButton.Click += CancelButton_Click;
-        }
-
-        private void LoadSettingsData()
-        {
             _currentSettings = _settingsService.LoadSettings();
 
-            // Populate Model ComboBox
-            var modelsToShow = new List<string>(_predefinedModels);
-            if (!string.IsNullOrWhiteSpace(_currentSettings.SelectedOpenRouterModel) &&
-                !modelsToShow.Contains(_currentSettings.SelectedOpenRouterModel))
-            {
-                // Add the currently saved model to the list if it's not already there
-                // This ensures it's visible and selectable even if it's not in the predefined list.
-                modelsToShow.Insert(0, _currentSettings.SelectedOpenRouterModel);
-            }
-
-            ModelComboBox.ItemsSource = modelsToShow;
+            SystemPromptTextBox.Text = _currentSettings.CustomSystemPrompt ?? string.Empty;
+            SerpApiKeyBox.Password = _currentSettings.SerpApiKey ?? string.Empty;
 
             if (!string.IsNullOrWhiteSpace(_currentSettings.SelectedOpenRouterModel))
             {
-                ModelComboBox.SelectedItem = _currentSettings.SelectedOpenRouterModel;
+                SelectedModelText.Text = _currentSettings.SelectedOpenRouterModel;
             }
-            else if (modelsToShow.Any()) // Default to first in list if no setting and list is not empty
+
+            SaveButton.Click += SaveButton_Click;
+            CancelButton.Click += CancelButton_Click;
+
+            Loaded += async (_, _) => await LoadModelsAsync();
+        }
+
+        private async System.Threading.Tasks.Task LoadModelsAsync()
+        {
+            LoadingOverlay.Visibility = Visibility.Visible;
+
+            try
             {
-                 ModelComboBox.SelectedIndex = 0;
+                _allModels = await OpenRouterService.FetchAvailableModelsAsync();
+
+                if (_allModels.Count == 0)
+                {
+                    // Fallback: if the API returned nothing, show a message
+                    LoadingOverlay.Visibility = Visibility.Collapsed;
+                    MessageBox.Show(
+                        "Could not retrieve models from OpenRouter. Check your internet connection.",
+                        "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                ApplyFilter(string.Empty);
+
+                // Pre-select the currently saved model
+                if (!string.IsNullOrWhiteSpace(_currentSettings.SelectedOpenRouterModel))
+                {
+                    var match = _allModels.FirstOrDefault(m =>
+                        m.Id.Equals(_currentSettings.SelectedOpenRouterModel, StringComparison.OrdinalIgnoreCase));
+                    if (match != null)
+                    {
+                        _selectedModel = match;
+                        _suppressSelectionEvent = true;
+                        ModelListBox.SelectedItem = match;
+                        ModelListBox.ScrollIntoView(match);
+                        _suppressSelectionEvent = false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading models: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                LoadingOverlay.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            string query = SearchTextBox.Text;
+            SearchPlaceholder.Visibility = string.IsNullOrEmpty(query)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+            ApplyFilter(query);
+        }
+
+        private void ApplyFilter(string query)
+        {
+            if (_allModels.Count == 0)
+            {
+                ModelListBox.ItemsSource = null;
+                return;
             }
 
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                ModelListBox.ItemsSource = _allModels;
+                return;
+            }
 
-            // Populate System Prompt TextBox
-            SystemPromptTextBox.Text = _currentSettings.CustomSystemPrompt ?? string.Empty;
+            // Fuzzy matching: split query into tokens, each token must match
+            // somewhere in the model id or name (case-insensitive)
+            var tokens = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            var scored = _allModels
+                .Select(m => new { Model = m, Score = FuzzyScore(m, tokens) })
+                .Where(x => x.Score > 0)
+                .OrderByDescending(x => x.Score)
+                .Select(x => x.Model)
+                .ToList();
+
+            ModelListBox.ItemsSource = scored;
+        }
+
+        /// <summary>
+        /// Returns a score > 0 if all tokens match somewhere in the model's id or name.
+        /// Higher score = better match. Returns 0 if any token doesn't match.
+        /// </summary>
+        private static int FuzzyScore(OpenRouterModelInfo model, string[] tokens)
+        {
+            string haystack = $"{model.Id} {model.Name}".ToLowerInvariant();
+            int score = 0;
+
+            foreach (var token in tokens)
+            {
+                string lowerToken = token.ToLowerInvariant();
+                int idx = haystack.IndexOf(lowerToken, StringComparison.Ordinal);
+                if (idx < 0)
+                    return 0; // token not found at all — no match
+
+                // Bonus: exact start-of-word match
+                if (idx == 0 || haystack[idx - 1] is '/' or '-' or ' ' or ':')
+                    score += 10;
+
+                score += lowerToken.Length; // longer token matches score higher
+            }
+
+            return score;
+        }
+
+        private void ModelListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_suppressSelectionEvent) return;
+
+            if (ModelListBox.SelectedItem is OpenRouterModelInfo selected)
+            {
+                _selectedModel = selected;
+                SelectedModelText.Text = selected.Id;
+            }
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
         {
-            _currentSettings.SelectedOpenRouterModel = ModelComboBox.SelectedItem as string;
+            _currentSettings.SelectedOpenRouterModel = _selectedModel?.Id
+                ?? _currentSettings.SelectedOpenRouterModel; // Keep old if nothing new selected
 
             string customPromptText = SystemPromptTextBox.Text;
-            _currentSettings.CustomSystemPrompt = string.IsNullOrWhiteSpace(customPromptText) ? null : customPromptText.Trim();
+            _currentSettings.CustomSystemPrompt = string.IsNullOrWhiteSpace(customPromptText)
+                ? null
+                : customPromptText.Trim();
+
+            string serpKey = SerpApiKeyBox.Password;
+            _currentSettings.SerpApiKey = string.IsNullOrWhiteSpace(serpKey) ? null : serpKey.Trim();
 
             _settingsService.SaveSettings(_currentSettings);
             DialogResult = true;

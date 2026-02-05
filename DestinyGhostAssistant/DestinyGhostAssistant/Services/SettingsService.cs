@@ -136,7 +136,8 @@ namespace DestinyGhostAssistant.Services
             return new AppSettings
             {
                 SelectedOpenRouterModel = "nousresearch/deephermes-3-mistral-24b-preview:free",
-                CustomSystemPrompt = null // MainViewModel will use its dynamic prompt if this is null
+                CustomSystemPrompt = null, // MainViewModel will use its dynamic prompt if this is null
+                SerpApiKey = null
             };
         }
     }

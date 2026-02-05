@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using DestinyGhostAssistant.Utils;
 
 namespace DestinyGhostAssistant.Services.Tools
 {
@@ -16,7 +17,8 @@ namespace DestinyGhostAssistant.Services.Tools
         public async Task<string> ExecuteAsync(Dictionary<string, object> parameters)
         {
             // Validate 'path' parameter
-            if (!parameters.TryGetValue("path", out object? pathObj) || !(pathObj is string filePath) || string.IsNullOrWhiteSpace(filePath))
+            string? filePath = ToolParameterHelper.GetString(parameters, "path");
+            if (string.IsNullOrWhiteSpace(filePath))
             {
                 return "Error: 'path' parameter is required and must be a non-empty string.";
             }

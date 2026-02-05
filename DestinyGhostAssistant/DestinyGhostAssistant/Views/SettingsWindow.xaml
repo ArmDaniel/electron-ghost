@@ -4,30 +4,89 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Application Settings" Height="400" Width="500"
-        MinHeight="350" MinWidth="400"
+        Title="Application Settings" Height="550" Width="560"
+        MinHeight="450" MinWidth="450"
         WindowStartupLocation="CenterOwner">
     <Grid Margin="15">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/> <!-- Model Label -->
-            <RowDefinition Height="Auto"/> <!-- Model ComboBox -->
-            <RowDefinition Height="Auto"/> <!-- Prompt Label -->
-            <RowDefinition Height="*"/>    <!-- Prompt TextBox -->
-            <RowDefinition Height="Auto"/> <!-- Buttons -->
+            <RowDefinition Height="Auto"/>  <!-- Model Label + selected -->
+            <RowDefinition Height="Auto"/>  <!-- Search box -->
+            <RowDefinition Height="*"/>     <!-- Model list -->
+            <RowDefinition Height="Auto"/>  <!-- SERP API Key Label -->
+            <RowDefinition Height="Auto"/>  <!-- SERP API Key TextBox -->
+            <RowDefinition Height="Auto"/>  <!-- Prompt Label -->
+            <RowDefinition Height="120"/>   <!-- Prompt TextBox -->
+            <RowDefinition Height="Auto"/>  <!-- Buttons -->
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
 
-        <TextBlock Grid.Row="0" Margin="0,0,0,5">Select OpenRouter Model:</TextBlock>
-        <ComboBox Grid.Row="1" x:Name="ModelComboBox" Margin="0,0,0,15"/>
+        <!-- Row 0: Label showing currently selected model -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,5">
+            <TextBlock FontWeight="SemiBold" Margin="0,0,0,2">Select OpenRouter Model:</TextBlock>
+            <TextBlock x:Name="SelectedModelText" FontSize="11" Foreground="Gray"
+                       TextTrimming="CharacterEllipsis"
+                       Text="(none selected)"/>
+        </StackPanel>
 
-        <TextBlock Grid.Row="2" Margin="0,0,0,5">Custom System Prompt (leave empty to use default built-in prompt):</TextBlock>
-        <TextBox Grid.Row="3" x:Name="SystemPromptTextBox" Margin="0,0,0,15"
-                 AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
-                 MinHeight="100"/>
+        <!-- Row 1: Search / filter box -->
+        <Grid Grid.Row="1" Margin="0,0,0,4">
+            <TextBox x:Name="SearchTextBox"
+                     Padding="4,3"
+                     TextChanged="SearchTextBox_TextChanged"/>
+            <TextBlock Text="🔍  Search models..."
+                       IsHitTestVisible="False"
+                       Foreground="Gray"
+                       Padding="6,4"
+                       x:Name="SearchPlaceholder"/>
+        </Grid>
 
-        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+        <!-- Row 2: Model list with loading overlay -->
+        <Grid Grid.Row="2" Margin="0,0,0,10">
+            <ListBox x:Name="ModelListBox"
+                     SelectionChanged="ModelListBox_SelectionChanged"
+                     HorizontalContentAlignment="Stretch"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="2,3">
+                            <TextBlock Text="{Binding DisplayName}"
+                                       TextWrapping="NoWrap"
+                                       TextTrimming="CharacterEllipsis"
+                                       FontSize="12.5"/>
+                            <TextBlock FontSize="10" Foreground="Gray"
+                                       TextTrimming="CharacterEllipsis">
+                                <TextBlock.Text>
+                                    <MultiBinding StringFormat="{}Context: {0:N0} tokens">
+                                        <Binding Path="ContextLength"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Loading overlay -->
+            <Border x:Name="LoadingOverlay" Background="#80FFFFFF"
+                    Visibility="Visible">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="Loading models from OpenRouter..."
+                               HorizontalAlignment="Center" FontSize="13"/>
+                    <ProgressBar IsIndeterminate="True" Width="200" Height="16" Margin="0,10,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Row 3-4: SERP API Key -->
+        <TextBlock Grid.Row="3" Margin="0,5,0,3" FontWeight="SemiBold">Serper API Key (for web search — serper.dev):</TextBlock>
+        <PasswordBox Grid.Row="4" x:Name="SerpApiKeyBox" Margin="0,0,0,10" Padding="4,3"/>
+
+        <!-- Row 5-6: System prompt -->
+        <TextBlock Grid.Row="5" Margin="0,0,0,5">Custom System Prompt (leave empty to use default built-in prompt):</TextBlock>
+        <TextBox Grid.Row="6" x:Name="SystemPromptTextBox" Margin="0,0,0,15"
+                 AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+
+        <!-- Row 7: Buttons -->
+        <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button x:Name="SaveButton" Content="Save" Width="80" Height="25" IsDefault="True" Margin="0,0,10,0"/>
             <Button x:Name="CancelButton" Content="Cancel" Width="80" Height="25" IsCancel="True"/>
         </StackPanel>

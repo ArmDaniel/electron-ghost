@@ -14,6 +14,7 @@ namespace DestinyGhostAssistant.Services
     {
         private readonly Dictionary<string, ITool> _tools = new Dictionary<string, ITool>();
         private readonly MainViewModel _mainViewModel; // Consider an IUIService interface for loose coupling
+        private readonly Func<string?> _serpApiKeyProvider;
 
         private static readonly JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions
         {
@@ -21,15 +22,15 @@ namespace DestinyGhostAssistant.Services
             // Add other options if needed, e.g., converters
         };
 
-        public ToolExecutorService(MainViewModel mainViewModel)
+        public ToolExecutorService(MainViewModel mainViewModel, Func<string?>? serpApiKeyProvider = null)
         {
             _mainViewModel = mainViewModel ?? throw new ArgumentNullException(nameof(mainViewModel));
+            _serpApiKeyProvider = serpApiKeyProvider ?? (() => null);
             RegisterTools();
         }
 
         private void RegisterTools()
         {
-            // Tools will be registered here in later steps.
             var createFileTool = new CreateFileTool();
             _tools.Add(createFileTool.Name, createFileTool);
 
@@ -38,6 +39,30 @@ namespace DestinyGhostAssistant.Services
 
             var writeFileTool = new WriteFileTool();
             _tools.Add(writeFileTool.Name, writeFileTool);
+
+            var webSearchTool = new WebSearchTool(_serpApiKeyProvider);
+            _tools.Add(webSearchTool.Name, webSearchTool);
+
+            var fetchWebPageTool = new FetchWebPageTool();
+            _tools.Add(fetchWebPageTool.Name, fetchWebPageTool);
+
+            var listDirectoryTool = new ListDirectoryTool();
+            _tools.Add(listDirectoryTool.Name, listDirectoryTool);
+
+            var moveFileTool = new MoveFileTool();
+            _tools.Add(moveFileTool.Name, moveFileTool);
+
+            var copyFileTool = new CopyFileTool();
+            _tools.Add(copyFileTool.Name, copyFileTool);
+
+            var deleteFileTool = new DeleteFileTool();
+            _tools.Add(deleteFileTool.Name, deleteFileTool);
+
+            var createDirectoryTool = new CreateDirectoryTool();
+            _tools.Add(createDirectoryTool.Name, createDirectoryTool);
+
+            var fileInfoTool = new FileInfoTool();
+            _tools.Add(fileInfoTool.Name, fileInfoTool);
         }
 
         public List<ITool> GetAvailableTools()
@@ -77,12 +102,16 @@ namespace DestinyGhostAssistant.Services
 
         private bool NeedsConfirmation(string toolName)
         {
-            // Define which tools need confirmation.
-            if (toolName == "create_file" || toolName == "write_file")
+            // Destructive or potentially dangerous operations need user approval.
+            return toolName switch
             {
-                return true;
-            }
-            return false;
+                "create_file" => true,
+                "write_file" => true,
+                "move_file" => true,
+                "copy_file" => true,
+                "delete_file" => true,
+                _ => false
+            };
         }
 
         private async Task<bool> ShowConfirmationDialogAsync(string toolName, Dictionary<string, object> parameters)
